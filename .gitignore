@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Private session notes (local only)
+docs/session-notes-2026-01-05.md
