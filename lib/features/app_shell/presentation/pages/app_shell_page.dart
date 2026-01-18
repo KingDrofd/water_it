@@ -8,6 +8,7 @@ import 'package:water_it/core/widgets/nav_bars/custom_nav_bar.dart';
 import 'package:water_it/core/widgets/nav_bars/nav_item.dart';
 import 'package:water_it/features/home/presentation/pages/home_page.dart';
 import 'package:water_it/features/plants/presentation/pages/plants_page.dart';
+import 'package:water_it/features/plants/presentation/pages/plant_form_page.dart';
 import 'package:water_it/features/profile/presentation/pages/profile_page.dart';
 import 'package:water_it/features/scan/presentation/pages/scan_page.dart';
 
@@ -94,7 +95,15 @@ class _AppShellPageState extends State<AppShellPage> {
                         icon: _selectedIndex == 1
                             ? Icons.add
                             : Icons.notifications_none,
-                        onTap: () {},
+                        onTap: () {
+                          if (_selectedIndex == 1) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const PlantFormPage(),
+                              ),
+                            );
+                          }
+                        },
                       ),
                       ),
                     ),

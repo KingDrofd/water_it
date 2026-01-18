@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:water_it/core/layout/app_breakpoints.dart';
 import 'package:water_it/core/layout/app_layout.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
+import 'package:water_it/features/plants/presentation/pages/plant_detail_page.dart';
 import 'package:water_it/features/plants/presentation/widgets/plant_card.dart';
 
 enum PlantListView { gridOne, gridTwo, list }
@@ -78,7 +79,7 @@ class _PlantsPageState extends State<PlantsPage> {
                   subtitle: _plantSubtitle(index),
                   schedule: _plantSchedule(index),
                   layout: PlantCardLayout.list,
-                  onTap: () {},
+                  onTap: () => _openDetail(context, index),
                 ),
               );
             },
@@ -96,7 +97,7 @@ class _PlantsPageState extends State<PlantsPage> {
                   subtitle: _plantSubtitle(index),
                   schedule: _plantSchedule(index),
                   layout: PlantCardLayout.wide,
-                  onTap: () {},
+                  onTap: () => _openDetail(context, index),
                 ),
               );
             },
@@ -115,7 +116,7 @@ class _PlantsPageState extends State<PlantsPage> {
                 subtitle: _plantSubtitle(index),
                 schedule: _plantSchedule(index),
                 layout: PlantCardLayout.grid,
-                onTap: () {},
+                onTap: () => _openDetail(context, index),
               );
             },
             childCount: 20,
@@ -172,6 +173,14 @@ class _PlantsPageState extends State<PlantsPage> {
       'Every 14 days',
     ];
     return schedules[index % schedules.length];
+  }
+
+  void _openDetail(BuildContext context, int index) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PlantDetailPage(name: _plantName(index)),
+      ),
+    );
   }
 }
 
