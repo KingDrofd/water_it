@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'app_breakpoints.dart';
 
 class AppLayout {
+  static const double _navBarHeight = 72;
+  static const double _navBarInsetPadding = 16;
   static const double _compactPadding = 16;
   static const double _mediumPadding = 24;
   static const double _expandedPadding = 32;
@@ -70,5 +72,10 @@ class AppLayout {
 
     final scale = width / baseWidth;
     return scale.clamp(minScale, maxScale);
+  }
+
+  static double navBarInset(double width, {double spacing = 0}) {
+    final scale = scaleForWidth(width);
+    return (_navBarHeight * scale) + (spacing + _navBarInsetPadding);
   }
 }

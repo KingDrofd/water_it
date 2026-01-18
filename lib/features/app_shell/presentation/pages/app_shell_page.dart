@@ -63,41 +63,53 @@ class _AppShellPageState extends State<AppShellPage> {
           return Center(
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: contentMax),
-              child: Column(
+              child: Stack(
                 children: [
-                  CustomAppBar(
-                    elements: AppBarElements(
-                      leading: AppBarIconButton(
-                        icon: Icons.menu,
-                        onTap: () {},
+                  Positioned.fill(
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        left: padding.left,
+                        right: padding.right,
                       ),
-                      title: Center(
-                        child: Text(
-                          _titles[_selectedIndex],
-                          style: textTheme.displaySmall,
+                      child: _pages[_selectedIndex],
+                    ),
+                  ),
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: CustomAppBar(
+                      elements: AppBarElements(
+                        leading: AppBarIconButton(
+                          icon: Icons.menu,
+                          onTap: () {},
                         ),
-                      ),
+                        title: Center(
+                          child: Text(
+                            _titles[_selectedIndex],
+                            style: textTheme.displaySmall,
+                          ),
+                        ),
                       action: AppBarIconButton(
-                        icon: Icons.notifications_none,
+                        icon: _selectedIndex == 1
+                            ? Icons.add
+                            : Icons.notifications_none,
                         onTap: () {},
                       ),
-                    ),
-                  ),
-                  Expanded(
-                    child: SafeArea(
-                      top: false,
-                      child: Padding(
-                        padding: padding,
-                        child: _pages[_selectedIndex],
                       ),
                     ),
                   ),
-                  Padding(
-                    padding: EdgeInsets.only(bottom: spacing.lg),
-                    child: CustomNavBar(
-                      items: _navItems,
-                      selectedIndex: _selectedIndex,
-                      onTap: _setIndex,
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: Padding(
+                      padding: EdgeInsets.only(bottom: spacing.lg),
+                      child: CustomNavBar(
+                        items: _navItems,
+                        selectedIndex: _selectedIndex,
+                        onTap: _setIndex,
+                      ),
                     ),
                   ),
                 ],
