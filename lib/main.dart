@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:water_it/core/theme/app_theme.dart';
+import 'package:water_it/features/app_shell/presentation/pages/app_shell_page.dart';
 import 'package:water_it/l10n/app_localizations.dart';
-import 'package:water_it/features/plants/presentation/pages/plant_list_page.dart';
 
 void main() {
   runApp(const WaterItApp());
@@ -16,11 +17,18 @@ class WaterItApp extends StatelessWidget {
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       title: 'Water It',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-        useMaterial3: true,
-      ),
-      home: const PlantListPage(),
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: ThemeMode.light,
+      builder: (context, child) {
+        final mediaQuery = MediaQuery.of(context);
+        final scaler = AppTheme.textScalerForWidth(mediaQuery.size.width);
+        return MediaQuery(
+          data: mediaQuery.copyWith(textScaler: scaler),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
+      home: const AppShellPage(),
     );
   }
 }
