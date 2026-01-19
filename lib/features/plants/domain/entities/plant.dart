@@ -10,6 +10,7 @@ class Plant {
     this.wateringLevel,
     this.scientificName,
     this.imagePaths = const [],
+    this.useRandomImage = false,
     this.reminders = const [],
   });
 
@@ -23,6 +24,7 @@ class Plant {
   final String? wateringLevel;
   final String? scientificName;
   final List<String> imagePaths;
+  final bool useRandomImage;
   final List<WateringReminder> reminders;
 
   Plant copyWith({
@@ -36,6 +38,7 @@ class Plant {
     String? wateringLevel,
     String? scientificName,
     List<String>? imagePaths,
+    bool? useRandomImage,
     List<WateringReminder>? reminders,
   }) {
     return Plant(
@@ -49,6 +52,7 @@ class Plant {
       wateringLevel: wateringLevel ?? this.wateringLevel,
       scientificName: scientificName ?? this.scientificName,
       imagePaths: imagePaths ?? this.imagePaths,
+      useRandomImage: useRandomImage ?? this.useRandomImage,
       reminders: reminders ?? this.reminders,
     );
   }
@@ -59,6 +63,7 @@ class WateringReminder {
     required this.id,
     required this.plantId,
     required this.frequencyDays,
+    this.weekdays = const [],
     this.preferredTime,
     this.notes,
   });
@@ -66,7 +71,7 @@ class WateringReminder {
   final String id;
   final String plantId;
   final int frequencyDays;
+  final List<int> weekdays;
   final DateTime? preferredTime;
   final String? notes;
 }
-

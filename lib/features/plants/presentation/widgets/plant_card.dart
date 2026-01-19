@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
 
@@ -9,6 +11,8 @@ class PlantCard extends StatelessWidget {
   final String schedule;
   final PlantCardLayout layout;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+  final String? imagePath;
 
   const PlantCard({
     super.key,
@@ -17,6 +21,8 @@ class PlantCard extends StatelessWidget {
     required this.schedule,
     required this.layout,
     this.onTap,
+    this.onLongPress,
+    this.imagePath,
   });
 
   @override
@@ -29,7 +35,11 @@ class PlantCard extends StatelessWidget {
     final content = switch (layout) {
       PlantCardLayout.list => Row(
           children: [
-            _ImagePlaceholder(size: 56, colorScheme: colorScheme),
+            _ImagePlaceholder(
+              size: 56,
+              colorScheme: colorScheme,
+              imagePath: imagePath,
+            ),
             SizedBox(width: spacing.md),
             Expanded(
               child: _CardText(
@@ -46,7 +56,11 @@ class PlantCard extends StatelessWidget {
         ),
       PlantCardLayout.wide => Row(
           children: [
-            _ImagePlaceholder(size: 84, colorScheme: colorScheme),
+            _ImagePlaceholder(
+              size: 84,
+              colorScheme: colorScheme,
+              imagePath: imagePath,
+            ),
             SizedBox(width: spacing.md),
             Expanded(
               child: _CardText(
@@ -63,7 +77,10 @@ class PlantCard extends StatelessWidget {
       PlantCardLayout.grid => Stack(
           children: [
             Positioned.fill(
-              child: _ImageBackground(colorScheme: colorScheme),
+              child: _ImageBackground(
+                colorScheme: colorScheme,
+                imagePath: imagePath,
+              ),
             ),
             Positioned(
               left: spacing.md,
@@ -91,6 +108,7 @@ class PlantCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: onTap,
+        onLongPress: onLongPress,
         child: Padding(
           padding: EdgeInsets.all(padding),
           child: DefaultTextStyle.merge(
@@ -106,50 +124,74 @@ class PlantCard extends StatelessWidget {
 class _ImagePlaceholder extends StatelessWidget {
   final double size;
   final ColorScheme colorScheme;
+  final String? imagePath;
 
   const _ImagePlaceholder({
     required this.size,
     required this.colorScheme,
+    this.imagePath,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: size,
-      width: size,
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceVariant,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Icon(
-        Icons.local_florist,
-        color: colorScheme.primary,
-      ),
+    final image = imagePath;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: image != null && image.isNotEmpty
+          ? Image.file(
+              File(image),
+              height: size,
+              width: size,
+              fit: BoxFit.cover,
+            )
+          : Container(
+              height: size,
+              width: size,
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceVariant,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(
+                Icons.local_florist,
+                color: colorScheme.primary,
+              ),
+            ),
     );
   }
 }
 
 class _ImageBackground extends StatelessWidget {
   final ColorScheme colorScheme;
+  final String? imagePath;
 
   const _ImageBackground({
     required this.colorScheme,
+    this.imagePath,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceVariant,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Center(
-        child: Icon(
-          Icons.local_florist,
-          size: 44,
-          color: colorScheme.primary,
-        ),
-      ),
+    final image = imagePath;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: image != null && image.isNotEmpty
+          ? Image.file(
+              File(image),
+              fit: BoxFit.cover,
+            )
+          : Container(
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceVariant,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.local_florist,
+                  size: 44,
+                  color: colorScheme.primary,
+                ),
+              ),
+            ),
     );
   }
 }

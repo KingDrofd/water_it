@@ -1,8 +1,14 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:water_it/core/layout/app_breakpoints.dart';
 import 'package:water_it/core/layout/app_layout.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
+import 'package:water_it/features/plants/domain/entities/plant.dart';
+import 'package:water_it/features/plants/presentation/bloc/plant_list_cubit.dart';
 import 'package:water_it/features/plants/presentation/pages/plant_detail_page.dart';
+import 'package:water_it/features/plants/presentation/utils/reminder_formatters.dart';
 import 'package:water_it/features/plants/presentation/widgets/plant_card.dart';
 
 enum PlantListView { gridOne, gridTwo, list }
@@ -31,6 +37,7 @@ class _PlantsPageState extends State<PlantsPage> {
       builder: (context, constraints) {
         final width = constraints.maxWidth;
         final gutter = AppLayout.gutter(width);
+        final listState = context.watch<PlantListCubit>().state;
 
         return CustomScrollView(
           slivers: [
@@ -58,7 +65,7 @@ class _PlantsPageState extends State<PlantsPage> {
                   spacing: spacing.xxl,
                 ),
               ),
-              sliver: _buildBody(width, gutter),
+              sliver: _buildBody(width, gutter, listState),
             ),
           ],
         );
@@ -66,68 +73,112 @@ class _PlantsPageState extends State<PlantsPage> {
     );
   }
 
-  Widget _buildBody(double width, double gutter) {
-    switch (_view) {
-      case PlantListView.list:
-        return SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              return Padding(
-                padding: EdgeInsets.only(bottom: gutter),
-                child: PlantCard(
-                  name: _plantName(index),
-                  subtitle: _plantSubtitle(index),
-                  schedule: _plantSchedule(index),
-                  layout: PlantCardLayout.list,
-                  onTap: () => _openDetail(context, index),
-                ),
-              );
-            },
-            childCount: 20,
+  Widget _buildBody(double width, double gutter, PlantListState state) {
+    switch (state.status) {
+      case PlantListStatus.loading:
+        return const SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(child: CircularProgressIndicator()),
+        );
+      case PlantListStatus.failure:
+        return SliverFillRemaining(
+          hasScrollBody: false,
+          child: _EmptyState(
+            title: 'Unable to load plants',
+            subtitle: state.errorMessage ?? 'Try again in a moment.',
           ),
         );
-      case PlantListView.gridOne:
-        return SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              return Padding(
-                padding: EdgeInsets.only(bottom: gutter),
-                child: PlantCard(
-                  name: _plantName(index),
-                  subtitle: _plantSubtitle(index),
-                  schedule: _plantSchedule(index),
-                  layout: PlantCardLayout.wide,
-                  onTap: () => _openDetail(context, index),
-                ),
-              );
-            },
-            childCount: 20,
+      case PlantListStatus.empty:
+        return const SliverFillRemaining(
+          hasScrollBody: false,
+          child: _EmptyState(
+            title: 'No plants yet',
+            subtitle: 'Tap the + button to add your first plant.',
           ),
         );
-      case PlantListView.gridTwo:
-        final columns = _columnsForWidth(width, _view);
-        const aspectRatio = 0.85;
+      case PlantListStatus.initial:
+      case PlantListStatus.loaded:
+        final plants = state.plants;
+        if (plants.isEmpty) {
+          return const SliverFillRemaining(
+            hasScrollBody: false,
+            child: _EmptyState(
+              title: 'No plants yet',
+              subtitle: 'Tap the + button to add your first plant.',
+            ),
+          );
+        }
+        switch (_view) {
+          case PlantListView.list:
+            return SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final plant = plants[index];
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: gutter),
+                    child: PlantCard(
+                      name: plant.name,
+                      subtitle: _plantSubtitle(plant),
+                      schedule: _plantSchedule(plant),
+                      layout: PlantCardLayout.list,
+                      onTap: () => _openDetail(context, plant),
+                      onLongPress: () => _confirmDelete(context, plant),
+                      imagePath: _displayImagePath(plant),
+                    ),
+                  );
+                },
+                childCount: plants.length,
+              ),
+            );
+          case PlantListView.gridOne:
+            return SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final plant = plants[index];
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: gutter),
+                    child: PlantCard(
+                      name: plant.name,
+                      subtitle: _plantSubtitle(plant),
+                      schedule: _plantSchedule(plant),
+                      layout: PlantCardLayout.wide,
+                      onTap: () => _openDetail(context, plant),
+                      onLongPress: () => _confirmDelete(context, plant),
+                      imagePath: _displayImagePath(plant),
+                    ),
+                  );
+                },
+                childCount: plants.length,
+              ),
+            );
+          case PlantListView.gridTwo:
+            final columns = _columnsForWidth(width, _view);
+            const aspectRatio = 0.85;
 
-        return SliverGrid(
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              return PlantCard(
-                name: _plantName(index),
-                subtitle: _plantSubtitle(index),
-                schedule: _plantSchedule(index),
-                layout: PlantCardLayout.grid,
-                onTap: () => _openDetail(context, index),
-              );
-            },
-            childCount: 20,
-          ),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
-            crossAxisSpacing: gutter,
-            mainAxisSpacing: gutter,
-            childAspectRatio: aspectRatio,
-          ),
-        );
+            return SliverGrid(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final plant = plants[index];
+                  return PlantCard(
+                    name: plant.name,
+                    subtitle: _plantSubtitle(plant),
+                    schedule: _plantSchedule(plant),
+                    layout: PlantCardLayout.grid,
+                    onTap: () => _openDetail(context, plant),
+                    onLongPress: () => _confirmDelete(context, plant),
+                    imagePath: _displayImagePath(plant),
+                  );
+                },
+                childCount: plants.length,
+              ),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                crossAxisSpacing: gutter,
+                mainAxisSpacing: gutter,
+                childAspectRatio: aspectRatio,
+              ),
+            );
+        }
     }
   }
 
@@ -142,43 +193,97 @@ class _PlantsPageState extends State<PlantsPage> {
     }
   }
 
-  String _plantName(int index) {
-    const names = [
-      'Golden Pothos',
-      'Snake Plant',
-      'Monstera',
-      'ZZ Plant',
-      'Fiddle Leaf',
-      'Peace Lily',
-      'Aloe Vera',
-      'Rubber Plant',
-    ];
-    return names[index % names.length];
+  String _plantSubtitle(Plant plant) {
+    return plant.preferredLighting ??
+        plant.scientificName ??
+        plant.wateringLevel ??
+        'No lighting details yet';
   }
 
-  String _plantSubtitle(int index) {
-    const subtitles = [
-      'Bright, indirect light',
-      'Low light tolerant',
-      'Weekly misting',
-      'North window',
-    ];
-    return subtitles[index % subtitles.length];
+  String _plantSchedule(Plant plant) {
+    final reminders = plant.reminders;
+    if (reminders.isNotEmpty) {
+      return formatReminderSubtitle(reminders.first);
+    }
+    return plant.wateringLevel ?? 'Set a watering schedule';
   }
 
-  String _plantSchedule(int index) {
-    const schedules = [
-      'Every 7 days',
-      'Every 10 days',
-      'Every 14 days',
-    ];
-    return schedules[index % schedules.length];
-  }
-
-  void _openDetail(BuildContext context, int index) {
+  void _openDetail(BuildContext context, Plant plant) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => PlantDetailPage(name: _plantName(index)),
+        builder: (_) => PlantDetailPage(plantId: plant.id),
+      ),
+    );
+  }
+
+  
+
+  String? _displayImagePath(Plant plant) {
+    if (plant.imagePaths.isEmpty) {
+      return null;
+    }
+    if (!plant.useRandomImage) {
+      return plant.imagePaths.first;
+    }
+    final index = Random().nextInt(plant.imagePaths.length);
+    return plant.imagePaths[index];
+  }
+
+  Future<void> _confirmDelete(BuildContext context, Plant plant) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete plant?'),
+          content: Text('Delete "${plant.name}" and its reminders?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete == true && context.mounted) {
+      context.read<PlantListCubit>().deletePlant(plant.id);
+    }
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const _EmptyState({
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(title, style: textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

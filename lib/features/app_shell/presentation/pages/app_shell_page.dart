@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:water_it/core/layout/app_layout.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
 import 'package:water_it/core/widgets/app_bars/app_bar_elements.dart';
@@ -9,6 +10,7 @@ import 'package:water_it/core/widgets/nav_bars/nav_item.dart';
 import 'package:water_it/features/home/presentation/pages/home_page.dart';
 import 'package:water_it/features/plants/presentation/pages/plants_page.dart';
 import 'package:water_it/features/plants/presentation/pages/plant_form_page.dart';
+import 'package:water_it/features/plants/presentation/bloc/plant_list_cubit.dart';
 import 'package:water_it/features/profile/presentation/pages/profile_page.dart';
 import 'package:water_it/features/scan/presentation/pages/scan_page.dart';
 
@@ -101,7 +103,9 @@ class _AppShellPageState extends State<AppShellPage> {
                               MaterialPageRoute(
                                 builder: (_) => const PlantFormPage(),
                               ),
-                            );
+                            ).then((_) {
+                              context.read<PlantListCubit>().loadPlants();
+                            });
                           }
                         },
                       ),

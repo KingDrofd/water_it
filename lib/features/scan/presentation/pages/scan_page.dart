@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:water_it/core/layout/app_layout.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
 import 'package:water_it/core/widgets/buttons/app_primary_button.dart';
+import 'package:water_it/features/plants/presentation/pages/plant_form_page.dart';
 
 class ScanPage extends StatefulWidget {
   const ScanPage({super.key});
@@ -16,6 +17,7 @@ class ScanPage extends StatefulWidget {
 class _ScanPageState extends State<ScanPage> {
   Uint8List? _imageBytes;
   String? _imageName;
+  String? _imagePath;
   bool _isPicking = false;
 
   Future<void> _takePhoto() async {
@@ -38,6 +40,7 @@ class _ScanPageState extends State<ScanPage> {
       setState(() {
         _imageBytes = bytes;
         _imageName = picked.name;
+        _imagePath = picked.path;
       });
     } finally {
       if (mounted) {
@@ -46,6 +49,16 @@ class _ScanPageState extends State<ScanPage> {
         });
       }
     }
+  }
+
+  void _showScanUnderConstruction() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Scan Now auto-fill is still under construction.',
+        ),
+      ),
+    );
   }
 
   @override
@@ -112,7 +125,7 @@ class _ScanPageState extends State<ScanPage> {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: _imageBytes == null ? null : () {},
+                    onPressed: _imageBytes == null ? null : _showScanUnderConstruction,
                     icon: const Icon(Icons.search),
                     label: const Text('Scan Now'),
                     style: OutlinedButton.styleFrom(
@@ -129,7 +142,15 @@ class _ScanPageState extends State<ScanPage> {
                 SizedBox(width: spacing.sm),
                 Expanded(
                   child: TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => PlantFormPage(
+                            initialImagePath: _imagePath,
+                          ),
+                        ),
+                      );
+                    },
                     child: const Text('Add New Plant'),
                   ),
                 ),

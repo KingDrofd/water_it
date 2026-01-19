@@ -1,15 +1,66 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
-import 'package:water_it/core/layout/app_layout.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:water_it/core/di/service_locator.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
 import 'package:water_it/core/widgets/app_bars/app_bar_icon_button.dart';
+import 'package:water_it/features/plants/domain/entities/plant.dart';
+import 'package:water_it/features/plants/presentation/bloc/plant_detail_cubit.dart';
+import 'package:water_it/features/plants/presentation/bloc/plant_list_cubit.dart';
 import 'package:water_it/features/plants/presentation/pages/plant_edit_page.dart';
+import 'package:water_it/features/plants/presentation/widgets/plant_detail_widgets.dart';
 
 class PlantDetailPage extends StatelessWidget {
-  final String name;
+  final String plantId;
 
   const PlantDetailPage({
     super.key,
-    required this.name,
+    required this.plantId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => PlantDetailCubit(getIt())..loadPlant(plantId),
+      child: Scaffold(
+        body: BlocBuilder<PlantDetailCubit, PlantDetailState>(
+          builder: (context, state) {
+            switch (state.status) {
+              case PlantDetailStatus.loading:
+                return const Center(child: CircularProgressIndicator());
+              case PlantDetailStatus.failure:
+                return PlantDetailMessage(
+                  title: 'Unable to load plant',
+                  subtitle: state.errorMessage ?? 'Try again in a moment.',
+                );
+              case PlantDetailStatus.notFound:
+                return const PlantDetailMessage(
+                  title: 'Plant not found',
+                  subtitle: 'It may have been deleted.',
+                );
+              case PlantDetailStatus.loaded:
+                return _DetailBody(
+                  plant: state.plant!,
+                  plantId: plantId,
+                );
+              case PlantDetailStatus.initial:
+                return const SizedBox.shrink();
+            }
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailBody extends StatelessWidget {
+  final Plant plant;
+  final String plantId;
+
+  const _DetailBody({
+    required this.plant,
+    required this.plantId,
   });
 
   @override
@@ -18,276 +69,139 @@ class PlantDetailPage extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      body: LayoutBuilder(
-        builder: (context, constraints) {          
-          return CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: SizedBox(height: spacing.xxl),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: spacing.lg),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          AppBarIconButton(
-                            icon: Icons.arrow_back,
-                            onTap: () => Navigator.of(context).pop(),
-                            size: 48,
-                            radius: 12,
-                          ),
-                          AppBarIconButton(
-                            icon: Icons.edit_outlined,
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => PlantEditPage(name: name),
-                                ),
-                              );
-                            },
-                            size: 48,
-                            radius: 12,
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: spacing.sm),
-                      _HeroImage(colorScheme: colorScheme),
-                      SizedBox(height: spacing.lg),
-                      Text(name, style: textTheme.headlineSmall),
-                      SizedBox(height: spacing.xs),
-                      Text('Epipremnum aureum', style: textTheme.bodySmall),
-                      SizedBox(height: spacing.md),
-                      Wrap(
-                        spacing: spacing.sm,
-                        runSpacing: spacing.sm,
-                        children: [
-                          _InfoChip(
-                            icon: Icons.wb_sunny_outlined,
-                            label: 'Bright indirect',
-                          ),
-                          _InfoChip(
-                            icon: Icons.opacity_outlined,
-                            label: 'Every 7 days',
-                          ),
-                          _InfoChip(
-                            icon: Icons.terrain_outlined,
-                            label: 'Loamy soil',
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: spacing.lg),
-                      _SectionCard(
-                        title: 'Overview',
-                        child: Column(
-                          children: const [
-                            _KeyValueRow(label: 'Origin', value: 'French Polynesia'),
-                            _KeyValueRow(label: 'Age', value: '2 years'),
-                            _KeyValueRow(label: 'Type', value: 'Trailing vine'),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: spacing.md),
-                      _SectionCard(
-                        title: 'Care',
-                        child: Column(
-                          children: const [
-                            _KeyValueRow(label: 'Light', value: 'Bright, indirect'),
-                            _KeyValueRow(label: 'Water', value: 'Moderate'),
-                            _KeyValueRow(label: 'Humidity', value: 'Average'),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: spacing.md),
-                      _SectionCard(
-                        title: 'Notes',
-                        child: Text(
-                          'Rotate weekly for even growth. Avoid direct sun.',
-                          style: textTheme.bodySmall,
-                        ),
-                      ),
-                      SizedBox(height: spacing.md),
-                      _SectionCard(
-                        title: 'Reminders',
-                        child: Column(
-                          children: const [
-                            _ReminderRow(
-                              title: 'Watering',
-                              subtitle: 'Next in 3 days',
-                            ),
-                            _ReminderRow(
-                              title: 'Fertilize',
-                              subtitle: 'Next in 2 weeks',
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: spacing.xxl),
-                    ],
-                  ),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: SizedBox(height: spacing.xl),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _HeroImage extends StatelessWidget {
-  final ColorScheme colorScheme;
-
-  const _HeroImage({
-    required this.colorScheme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 260,
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceVariant,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Center(
-        child: Icon(
-          Icons.local_florist,
-          size: 64,
-          color: colorScheme.primary,
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: SizedBox(height: spacing.xxl),
         ),
-      ),
-    );
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-
-  const _InfoChip({
-    required this.icon,
-    required this.label,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final spacing = Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
-
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: spacing.md, vertical: spacing.sm),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).dividerColor),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 18),
-          SizedBox(width: spacing.xs),
-          Text(label, style: Theme.of(context).textTheme.labelMedium),
-        ],
-      ),
-    );
-  }
-}
-
-class _SectionCard extends StatelessWidget {
-  final String title;
-  final Widget child;
-
-  const _SectionCard({
-    required this.title,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final spacing = Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      padding: EdgeInsets.all(spacing.md),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: textTheme.titleMedium),
-          SizedBox(height: spacing.sm),
-          child,
-        ],
-      ),
-    );
-  }
-}
-
-class _KeyValueRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _KeyValueRow({
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: textTheme.bodySmall),
-          Text(value, style: textTheme.labelLarge),
-        ],
-      ),
-    );
-  }
-}
-
-class _ReminderRow extends StatelessWidget {
-  final String title;
-  final String subtitle;
-
-  const _ReminderRow({
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          const Icon(Icons.notifications_none, size: 18),
-          const SizedBox(width: 8),
-          Expanded(
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: spacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: textTheme.bodyMedium),
-                Text(subtitle, style: textTheme.bodySmall),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    AppBarIconButton(
+                      icon: Icons.arrow_back,
+                      onTap: () => Navigator.of(context).pop(),
+                      size: 48,
+                      radius: 12,
+                    ),
+                    AppBarIconButton(
+                      icon: Icons.edit_outlined,
+                      onTap: () {
+                        Navigator.of(context)
+                            .push(
+                              MaterialPageRoute(
+                                builder: (_) => PlantEditPage(plantId: plantId),
+                              ),
+                            )
+                            .then((didUpdate) {
+                          if (didUpdate == true) {
+                            context.read<PlantDetailCubit>().loadPlant(plantId);
+                            getIt<PlantListCubit>().loadPlants();
+                          }
+                        });
+                      },
+                      size: 48,
+                      radius: 12,
+                    ),
+                  ],
+                ),
+                SizedBox(height: spacing.sm),
+                PlantHeroImage(
+                  colorScheme: colorScheme,
+                  imagePath: _displayImagePath(plant),
+                ),
+                if (plant.imagePaths.length > 1) ...[
+                  SizedBox(height: spacing.sm),
+                  PlantImageStrip(paths: plant.imagePaths),
+                ],
+                SizedBox(height: spacing.lg),
+                Text(plant.name, style: textTheme.headlineSmall),
+                SizedBox(height: spacing.xs),
+                Text(
+                  plant.scientificName ?? 'Scientific name not set',
+                  style: textTheme.bodySmall,
+                ),
+                SizedBox(height: spacing.md),
+                PlantDetailChips(plant: plant),
+                SizedBox(height: spacing.lg),
+                PlantSectionCard(
+                  title: 'Overview',
+                  child: Column(
+                    children: [
+                      PlantKeyValueRow(
+                        label: 'Origin',
+                        value: plant.origin ?? 'Unknown',
+                      ),
+                      PlantKeyValueRow(
+                        label: 'Age',
+                        value: plant.ageMonths != null
+                            ? '${plant.ageMonths} months'
+                            : 'Unknown',
+                      ),
+                      PlantKeyValueRow(
+                        label: 'Scientific',
+                        value: plant.scientificName ?? 'Unknown',
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: spacing.md),
+                PlantSectionCard(
+                  title: 'Care',
+                  child: Column(
+                    children: [
+                      PlantKeyValueRow(
+                        label: 'Light',
+                        value: plant.preferredLighting ?? 'Not set',
+                      ),
+                      PlantKeyValueRow(
+                        label: 'Water',
+                        value: plant.wateringLevel ?? 'Not set',
+                      ),
+                      PlantKeyValueRow(
+                        label: 'Soil',
+                        value: plant.soilType ?? 'Not set',
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: spacing.md),
+                PlantSectionCard(
+                  title: 'Notes',
+                  child: Text(
+                    plant.description ?? 'No notes yet.',
+                    style: textTheme.bodySmall,
+                  ),
+                ),
+                SizedBox(height: spacing.md),
+                PlantSectionCard(
+                  title: 'Reminders',
+                  child: PlantReminderSection(reminders: plant.reminders),
+                ),
+                SizedBox(height: spacing.xxl),
               ],
             ),
           ),
-        ],
-      ),
+        ),
+        SliverToBoxAdapter(
+          child: SizedBox(height: spacing.xl),
+        ),
+      ],
     );
   }
+}
+String? _displayImagePath(Plant plant) {
+  if (plant.imagePaths.isEmpty) {
+    return null;
+  }
+  if (!plant.useRandomImage) {
+    return plant.imagePaths.first;
+  }
+  final index = Random().nextInt(plant.imagePaths.length);
+  return plant.imagePaths[index];
 }

@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS plants(
   preferred_lighting TEXT,
   watering_level TEXT,
   scientific_name TEXT,
-  image_paths TEXT
+  image_paths TEXT,
+  use_random_image INTEGER NOT NULL DEFAULT 0
 );
 ''';
 
@@ -33,6 +34,7 @@ CREATE TABLE IF NOT EXISTS watering_reminders(
   id TEXT PRIMARY KEY,
   plant_id TEXT NOT NULL,
   frequency_days INTEGER NOT NULL,
+  weekdays TEXT,
   preferred_time TEXT,
   notes TEXT,
   FOREIGN KEY(plant_id) REFERENCES plants(id) ON DELETE CASCADE
@@ -94,6 +96,7 @@ CREATE TABLE IF NOT EXISTS watering_reminders(
                 id: reminder.id,
                 plantId: reminder.plantId,
                 frequencyDays: reminder.frequencyDays,
+                weekdays: reminder.weekdays,
                 preferredTime: reminder.preferredTime,
                 notes: reminder.notes,
               );

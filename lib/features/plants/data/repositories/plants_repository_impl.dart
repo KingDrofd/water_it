@@ -33,6 +33,7 @@ class PlantsRepositoryImpl implements PlantsRepository {
             wateringLevel: plant.wateringLevel,
             scientificName: plant.scientificName,
             imagePaths: plant.imagePaths,
+            useRandomImage: plant.useRandomImage,
             reminders: plant.reminders,
           );
     return _localDataSource.upsertPlant(model);
