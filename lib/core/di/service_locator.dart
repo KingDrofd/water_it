@@ -14,6 +14,7 @@ import 'package:water_it/features/home/data/repositories/weather_repository_impl
 import 'package:water_it/features/home/domain/repositories/weather_repository.dart';
 import 'package:water_it/features/home/domain/usecases/get_weather_slots.dart';
 import 'package:water_it/features/home/presentation/bloc/home_weather_cubit.dart';
+import 'package:water_it/features/home/presentation/bloc/home_reminder_cubit.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -63,6 +64,9 @@ Future<void> setupLocator() async {
   );
   getIt.registerFactory<HomeWeatherCubit>(
     () => HomeWeatherCubit(getIt<GetWeatherSlots>()),
+  );
+  getIt.registerFactory<HomeReminderCubit>(
+    () => HomeReminderCubit(getIt<GetPlants>()),
   );
 
   await getIt.allReady();

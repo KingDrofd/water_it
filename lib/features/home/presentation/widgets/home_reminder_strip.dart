@@ -1,29 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
+import 'package:water_it/features/home/presentation/models/home_reminder_item.dart';
 
 class HomeReminderStrip extends StatelessWidget {
   final AppSpacing spacing;
   final TextTheme textTheme;
   final ColorScheme colorScheme;
+  final List<HomeReminderItem> items;
+  final ValueChanged<HomeReminderItem>? onTapItem;
 
   const HomeReminderStrip({
     super.key,
     required this.spacing,
     required this.textTheme,
     required this.colorScheme,
+    required this.items,
+    this.onTapItem,
   });
 
   @override
   Widget build(BuildContext context) {
-    final items = const [
-      _ReminderItem(label: 'Plant 1', task: 'Pruning', icon: Icons.spa),
-      _ReminderItem(label: 'Plant 2', task: 'Watering', icon: Icons.water_drop),
-      _ReminderItem(
-        label: 'Plant 3',
-        task: 'Watering and Pruning',
-        icon: Icons.local_florist,
-      ),
-    ];
+    if (items.isEmpty) {
+      return Container(
+        padding: EdgeInsets.all(spacing.lg),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: colorScheme.outline),
+        ),
+        child: Center(
+          child: Text(
+            'No reminders yet.',
+            style: textTheme.bodySmall,
+          ),
+        ),
+      );
+    }
 
     return Container(
       padding: EdgeInsets.all(spacing.lg),
@@ -43,6 +56,7 @@ class HomeReminderStrip extends StatelessWidget {
                     item: item,
                     textTheme: textTheme,
                     colorScheme: colorScheme,
+                    onTap: onTapItem == null ? null : () => onTapItem!(item),
                   ),
                 ),
               ),
@@ -53,44 +67,43 @@ class HomeReminderStrip extends StatelessWidget {
   }
 }
 
-class _ReminderItem {
-  final String label;
-  final String task;
-  final IconData icon;
-
-  const _ReminderItem({
-    required this.label,
-    required this.task,
-    required this.icon,
-  });
-}
-
 class _ReminderTile extends StatelessWidget {
-  final _ReminderItem item;
+  final HomeReminderItem item;
   final TextTheme textTheme;
   final ColorScheme colorScheme;
+  final VoidCallback? onTap;
 
   const _ReminderTile({
     required this.item,
     required this.textTheme,
     required this.colorScheme,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(item.label, style: textTheme.labelLarge),
-        const SizedBox(height: 8),
-        Icon(item.icon, color: colorScheme.primary, size: 36),
-        const SizedBox(height: 8),
-        Text(
-          item.task,
-          style: textTheme.bodySmall,
-          textAlign: TextAlign.center,
-        ),
-      ],
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(item.plantName, style: textTheme.labelLarge),
+          const SizedBox(height: 8),
+          Icon(item.icon, color: colorScheme.primary, size: 36),
+          const SizedBox(height: 8),
+          Text(
+            item.task,
+            style: textTheme.bodySmall,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            DateFormat('EEE h:mm a').format(item.dueAt),
+            style: textTheme.labelSmall,
+          ),
+        ],
+      ),
     );
   }
 }
