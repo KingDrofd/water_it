@@ -7,6 +7,7 @@ import 'package:water_it/core/widgets/app_bars/app_bar_icon_button.dart';
 import 'package:water_it/core/widgets/app_bars/custom_app_bar.dart';
 import 'package:water_it/core/widgets/nav_bars/custom_nav_bar.dart';
 import 'package:water_it/core/widgets/nav_bars/nav_item.dart';
+import 'package:water_it/features/app_shell/presentation/widgets/quick_actions_drawer.dart';
 import 'package:water_it/features/home/presentation/pages/home_page.dart';
 import 'package:water_it/features/plants/presentation/pages/plants_page.dart';
 import 'package:water_it/features/plants/presentation/pages/plant_form_page.dart';
@@ -57,6 +58,7 @@ class _AppShellPageState extends State<AppShellPage> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
+      drawer: const QuickActionsDrawer(),
       body: LayoutBuilder(
         builder: (context, constraints) {
           final width = constraints.maxWidth;
@@ -81,35 +83,40 @@ class _AppShellPageState extends State<AppShellPage> {
                     top: 0,
                     left: 0,
                     right: 0,
-                    child: CustomAppBar(
-                      elements: AppBarElements(
-                        leading: AppBarIconButton(
-                          icon: Icons.menu,
-                          onTap: () {},
-                        ),
-                        title: Center(
-                          child: Text(
-                            _titles[_selectedIndex],
-                            style: textTheme.displaySmall,
-                          ),
-                        ),
-                      action: AppBarIconButton(
-                        icon: _selectedIndex == 1
-                            ? Icons.add
-                            : Icons.notifications_none,
-                        onTap: () {
-                          if (_selectedIndex == 1) {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const PlantFormPage(),
+                    child: Builder(
+                      builder: (appBarContext) {
+                        return CustomAppBar(
+                          elements: AppBarElements(
+                            leading: AppBarIconButton(
+                              icon: Icons.menu,
+                              onTap: () =>
+                                  Scaffold.of(appBarContext).openDrawer(),
+                            ),
+                            title: Center(
+                              child: Text(
+                                _titles[_selectedIndex],
+                                style: textTheme.displaySmall,
                               ),
-                            ).then((_) {
-                              context.read<PlantListCubit>().loadPlants();
-                            });
-                          }
-                        },
-                      ),
-                      ),
+                            ),
+                            action: AppBarIconButton(
+                              icon: _selectedIndex == 1
+                                  ? Icons.add
+                                  : Icons.notifications_none,
+                              onTap: () {
+                                if (_selectedIndex == 1) {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => const PlantFormPage(),
+                                    ),
+                                  ).then((_) {
+                                    context.read<PlantListCubit>().loadPlants();
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                   Positioned(
