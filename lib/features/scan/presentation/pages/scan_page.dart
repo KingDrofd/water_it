@@ -79,8 +79,8 @@ class _ScanPageState extends State<ScanPage> {
           ),
           children: [
             SizedBox(height: AppLayout.navBarInset(width, spacing: spacing.xxl + spacing.xxl)),
-            Text('Scan Plant', style: textTheme.headlineSmall),
-            SizedBox(height: spacing.sm),
+            
+            
             Text(
               'Take a clear photo of the plant to identify it later.',
               style: textTheme.bodySmall,

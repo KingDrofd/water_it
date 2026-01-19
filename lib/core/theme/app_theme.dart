@@ -69,7 +69,16 @@ class AppTheme {
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: AppColors.primary),
         ),
-        labelStyle: textTheme.labelLarge?.copyWith(color: AppColors.muted),
+        labelStyle: textTheme.labelLarge?.copyWith(
+          color: AppColors.muted,
+          fontFamily: AppTypography.titleFont,
+          fontWeight: FontWeight.w600,
+        ),
+        floatingLabelStyle: textTheme.labelLarge?.copyWith(
+          color: AppColors.primary,
+          fontFamily: AppTypography.titleFont,
+          fontWeight: FontWeight.w600,
+        ),
         hintStyle: textTheme.bodyMedium?.copyWith(color: AppColors.muted),
       ),
       cardTheme: CardThemeData(

@@ -50,27 +50,24 @@ class CustomAppBar extends StatelessWidget {
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: spacing.md * scale),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  mainAxisAlignment: MainAxisAlignment.start,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
+                    if (elements.leading != null)
+                      Padding(
+                        padding: EdgeInsets.only(right: spacing.sm * scale),
+                        child: elements.leading!,
+                      ),
                     Expanded(
-                      flex: 1,
                       child: Align(
                         alignment: Alignment.centerLeft,
-                        child: elements.leading,
+                        child: elements.title,
                       ),
                     ),
-                    Expanded(
-                      flex: 2,
-                      child: Center(child: elements.title),
-                    ),
-                    Expanded(
-                      flex: 1,
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: elements.action,
-                      ),
-                    ),
+                    if (elements.action != null) ...[
+                      SizedBox(width: spacing.sm * scale),
+                      elements.action!,
+                    ],
                   ],
                 ),
               ),

@@ -84,10 +84,11 @@ class _DetailBody extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     AppBarIconButton(
-                      icon: Icons.arrow_back,
+                      icon: Icons.chevron_left,
                       onTap: () => Navigator.of(context).pop(),
                       size: 48,
                       radius: 12,
+                      iconSize: 30,
                     ),
                     AppBarIconButton(
                       icon: Icons.edit_outlined,
@@ -120,7 +121,11 @@ class _DetailBody extends StatelessWidget {
                   PlantImageStrip(paths: plant.imagePaths),
                 ],
                 SizedBox(height: spacing.lg),
-                Text(plant.name, style: textTheme.headlineSmall),
+                Text(
+                  plant.name,
+                  style: textTheme.displaySmall?.copyWith(fontSize: 26),
+                  textAlign: TextAlign.center,
+                ),
                 SizedBox(height: spacing.xs),
                 Text(
                   plant.scientificName ?? 'Scientific name not set',

@@ -5,6 +5,7 @@ class AppBarIconButton extends StatelessWidget {
   final VoidCallback onTap;
   final double size;
   final double radius;
+  final double iconSize;
 
   const AppBarIconButton({
     super.key,
@@ -12,6 +13,7 @@ class AppBarIconButton extends StatelessWidget {
     required this.onTap,
     this.size = 60,
     this.radius = 12,
+    this.iconSize = 24,
   });
 
   @override
@@ -29,7 +31,7 @@ class AppBarIconButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(radius),
           onTap: onTap,
           child: Center(
-            child: Icon(icon),
+            child: Icon(icon, size: iconSize),
           ),
         ),
       ),
