@@ -58,6 +58,11 @@ class ReminderInputRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spacing = Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
+    final textTheme = Theme.of(context).textTheme;
+    final labelStyle = textTheme.labelLarge?.copyWith(
+      fontFamily: 'Quicksand',
+      fontWeight: FontWeight.w600,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,9 +97,10 @@ class ReminderInputRow extends StatelessWidget {
         SizedBox(height: spacing.sm),
         TextField(
           controller: reminder.notesController,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Notes (optional)',
             hintText: 'Water sparingly in winter',
+            labelStyle: labelStyle,
           ),
         ),
       ],
