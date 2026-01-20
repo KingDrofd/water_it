@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
+import 'package:water_it/core/settings/app_settings.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
 import 'package:water_it/features/home/domain/entities/weather_slot.dart';
 
@@ -40,6 +41,7 @@ class HomeWeatherSection extends StatelessWidget {
   final String title;
   final String locationLabel;
   final String locationNote;
+  final TemperatureUnit temperatureUnit;
   final VoidCallback? onLocationTap;
 
   const HomeWeatherSection({
@@ -52,6 +54,7 @@ class HomeWeatherSection extends StatelessWidget {
     required this.title,
     required this.locationLabel,
     required this.locationNote,
+    required this.temperatureUnit,
     this.onLocationTap,
     this.isPlaceholder = false,
     this.errorMessage,
@@ -124,6 +127,7 @@ class HomeWeatherSection extends StatelessWidget {
                               child: _WeatherTile(
                                 slot: slot.slot,
                                 textTheme: textTheme,
+                                temperatureUnit: temperatureUnit,
                                 isPlaceholder: slot.isPlaceholder,
                               ),
                             ),
@@ -141,11 +145,13 @@ class HomeWeatherSection extends StatelessWidget {
 class _WeatherTile extends StatelessWidget {
   final WeatherSlot slot;
   final TextTheme textTheme;
+  final TemperatureUnit temperatureUnit;
   final bool isPlaceholder;
 
   const _WeatherTile({
     required this.slot,
     required this.textTheme,
+    required this.temperatureUnit,
     required this.isPlaceholder,
   });
 
@@ -154,8 +160,12 @@ class _WeatherTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final dayLabel = DateFormat('EEE').format(slot.time);
     final timeLabel = DateFormat('h a').format(slot.time);
-    final tempLabel =
-        isPlaceholder ? '--' : slot.temperatureC.toStringAsFixed(0);
+    final tempLabel = isPlaceholder
+        ? '--'
+        : _formatTemperature(
+            slot.temperatureC,
+            temperatureUnit,
+          );
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -172,10 +182,18 @@ class _WeatherTile extends StatelessWidget {
           isPlaceholder: isPlaceholder,
         ),
         const SizedBox(height: 6),
-        Text('$tempLabeløC', style: textTheme.titleLarge),
+        Text('$tempLabel${temperatureUnit.symbol}', style: textTheme.titleLarge),
       ],
     );
   }
+}
+
+String _formatTemperature(double temperatureC, TemperatureUnit unit) {
+  if (unit == TemperatureUnit.fahrenheit) {
+    final value = (temperatureC * 9 / 5) + 32;
+    return value.toStringAsFixed(0);
+  }
+  return temperatureC.toStringAsFixed(0);
 }
 
 class _WeatherSlotView {

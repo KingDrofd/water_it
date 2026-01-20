@@ -263,6 +263,40 @@ class HomeLocationController {
   }
 }
 
+class LocationPreference {
+  final String label;
+  final String note;
+
+  const LocationPreference({
+    required this.label,
+    required this.note,
+  });
+}
+
+Future<LocationPreference> readLocationPreference() async {
+  final prefs = await SharedPreferences.getInstance();
+  final choice = prefs.getString(_prefsKeyChoice);
+  final label = prefs.getString(_prefsKeyLabel);
+
+  if (choice == _prefChoiceDevice) {
+    return LocationPreference(
+      label: label ?? _unsetLocationLabel,
+      note: _deviceLocationNote,
+    );
+  }
+  if (choice == _prefChoiceCity) {
+    return LocationPreference(
+      label: label ?? _unsetLocationLabel,
+      note: _cityLocationNote,
+    );
+  }
+
+  return LocationPreference(
+    label: label ?? _unsetLocationLabel,
+    note: _unsetLocationNote,
+  );
+}
+
 const double _defaultLat = 37.7749;
 const double _defaultLon = -122.4194;
 const String _defaultLocationLabel = 'San Francisco, CA';

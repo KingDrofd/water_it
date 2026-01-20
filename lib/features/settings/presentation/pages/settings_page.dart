@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:water_it/core/layout/app_layout.dart';
+import 'package:water_it/core/settings/app_settings.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
 import 'package:water_it/core/widgets/app_bars/sliver_page_header.dart';
+import 'package:water_it/features/home/presentation/utils/home_location_controller.dart';
+import 'package:water_it/features/settings/presentation/widgets/settings_sections.dart';
 
 enum SettingsSection {
   notifications,
@@ -28,15 +31,40 @@ class _SettingsPageState extends State<SettingsPage> {
     SettingsSection.weather: GlobalKey(),
     SettingsSection.about: GlobalKey(),
   };
+  bool _wateringReminders = true;
+  bool _dailySummary = false;
+  TemperatureUnit _temperatureUnit = TemperatureUnit.celsius;
+  bool _isLoading = true;
+  String _locationLabel = 'Set your location';
+  String _locationNote = 'Tap to choose';
 
   @override
   void initState() {
     super.initState();
+    _loadSettings();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final section = widget.initialSection;
       if (section != null) {
         _scrollToSection(section);
       }
+    });
+  }
+
+  Future<void> _loadSettings() async {
+    final unit = await AppSettings.getTemperatureUnit();
+    final watering = await AppSettings.getWateringRemindersEnabled();
+    final summary = await AppSettings.getDailySummaryEnabled();
+    final location = await readLocationPreference();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _temperatureUnit = unit;
+      _wateringReminders = watering;
+      _dailySummary = summary;
+      _locationLabel = location.label;
+      _locationNote = location.note;
+      _isLoading = false;
     });
   }
 
@@ -56,6 +84,22 @@ class _SettingsPageState extends State<SettingsPage> {
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOut,
     );
+  }
+
+  Future<void> _selectLocation(BuildContext context) async {
+    final controller = HomeLocationController(
+      loadWeather: (_, __) async {},
+      setState: (_) {},
+      showError: (message) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      },
+    );
+
+    await controller.promptForLocation(context);
+    controller.dispose();
+    await _loadSettings();
   }
 
   @override
@@ -92,16 +136,34 @@ class _SettingsPageState extends State<SettingsPage> {
                           [
                             KeyedSubtree(
                               key: _sectionKeys[SettingsSection.notifications],
-                              child: _SettingsSection(
+                              child: SettingsSectionCard(
                                 title: 'Notifications',
-                                children: const [
-                                  _SettingsTile(
+                                children: [
+                                  SettingsSwitchTile(
                                     title: 'Watering reminders',
                                     subtitle: 'Manage reminder schedule.',
+                                    value: _wateringReminders,
+                                    isLoading: _isLoading,
+                                    onChanged: (value) async {
+                                      setState(() {
+                                        _wateringReminders = value;
+                                      });
+                                      await AppSettings
+                                          .setWateringRemindersEnabled(value);
+                                    },
                                   ),
-                                  _SettingsTile(
+                                  SettingsSwitchTile(
                                     title: 'Daily summary',
                                     subtitle: 'Get a quick morning snapshot.',
+                                    value: _dailySummary,
+                                    isLoading: _isLoading,
+                                    onChanged: (value) async {
+                                      setState(() {
+                                        _dailySummary = value;
+                                      });
+                                      await AppSettings
+                                          .setDailySummaryEnabled(value);
+                                    },
                                   ),
                                 ],
                               ),
@@ -109,16 +171,25 @@ class _SettingsPageState extends State<SettingsPage> {
                             SizedBox(height: spacing.md),
                             KeyedSubtree(
                               key: _sectionKeys[SettingsSection.weather],
-                              child: _SettingsSection(
+                              child: SettingsSectionCard(
                                 title: 'Weather',
-                                children: const [
-                                  _SettingsTile(
+                                children: [
+                                  SettingsTile(
                                     title: 'Location',
-                                    subtitle: 'Choose device or city.',
+                                    subtitle: '$_locationLabel - $_locationNote',
+                                    onTap: _isLoading
+                                        ? null
+                                        : () => _selectLocation(context),
                                   ),
-                                  _SettingsTile(
-                                    title: 'Units',
-                                    subtitle: 'Switch between C and F.',
+                                  SettingsUnitsTile(
+                                    unit: _temperatureUnit,
+                                    isLoading: _isLoading,
+                                    onChanged: (unit) async {
+                                      setState(() {
+                                        _temperatureUnit = unit;
+                                      });
+                                      await AppSettings.setTemperatureUnit(unit);
+                                    },
                                   ),
                                 ],
                               ),
@@ -126,14 +197,14 @@ class _SettingsPageState extends State<SettingsPage> {
                             SizedBox(height: spacing.md),
                             KeyedSubtree(
                               key: _sectionKeys[SettingsSection.about],
-                              child: _SettingsSection(
+                              child: SettingsSectionCard(
                                 title: 'About',
                                 children: const [
-                                  _SettingsTile(
+                                  SettingsTile(
                                     title: 'App version',
                                     subtitle: 'Build 0.1.0',
                                   ),
-                                  _SettingsTile(
+                                  SettingsTile(
                                     title: 'Licenses',
                                     subtitle: 'View open source attributions.',
                                   ),
@@ -151,57 +222,6 @@ class _SettingsPageState extends State<SettingsPage> {
           );
         },
       ),
-    );
-  }
-}
-
-class _SettingsSection extends StatelessWidget {
-  const _SettingsSection({
-    required this.title,
-    required this.children,
-  });
-
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: textTheme.titleMedium,
-        ),
-        const SizedBox(height: 8),
-        Card(
-          margin: EdgeInsets.zero,
-          child: Column(
-            children: children,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SettingsTile extends StatelessWidget {
-  const _SettingsTile({
-    required this.title,
-    required this.subtitle,
-  });
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      title: Text(title),
-      subtitle: Text(subtitle),
-      trailing: const Icon(Icons.chevron_right),
     );
   }
 }

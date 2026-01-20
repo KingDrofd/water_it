@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:water_it/core/di/service_locator.dart';
 import 'package:water_it/core/layout/app_layout.dart';
+import 'package:water_it/core/settings/app_settings.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
 import 'package:water_it/features/home/presentation/bloc/home_weather_cubit.dart';
 import 'package:water_it/features/home/presentation/bloc/home_reminder_cubit.dart';
@@ -38,10 +39,13 @@ class _HomeView extends StatefulWidget {
 
 class _HomeViewState extends State<_HomeView> {
   late final HomeLocationController _locationController;
+  TemperatureUnit _temperatureUnit = TemperatureUnit.celsius;
 
   @override
   void initState() {
     super.initState();
+    AppSettings.temperatureUnitNotifier.addListener(_handleTemperatureChange);
+    AppSettings.syncTemperatureUnit();
     _locationController = HomeLocationController(
       loadWeather: _loadWeather,
       setState: (fn) => setState(fn),
@@ -55,6 +59,8 @@ class _HomeViewState extends State<_HomeView> {
   @override
   void dispose() {
     _locationController.dispose();
+    AppSettings.temperatureUnitNotifier
+        .removeListener(_handleTemperatureChange);
     super.dispose();
   }
 
@@ -69,6 +75,15 @@ class _HomeViewState extends State<_HomeView> {
 
   Future<void> _loadWeather(double lat, double lon) {
     return context.read<HomeWeatherCubit>().load(lat: lat, lon: lon);
+  }
+
+  void _handleTemperatureChange() {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _temperatureUnit = AppSettings.temperatureUnitNotifier.value;
+    });
   }
 
   @override
@@ -86,11 +101,8 @@ class _HomeViewState extends State<_HomeView> {
           padding: EdgeInsets.only(
             left: spacing.lg,
             right: spacing.lg,
-            top: AppLayout.navBarInset(
-              width,
-              spacing: spacing.xxl + spacing.xxl,
-            ),
-            bottom: AppLayout.navBarInset(width, spacing: spacing.xxl),
+            top: spacing.lg,
+            bottom: spacing.xxl,
           ),
           children: [
             BlocBuilder<HomeWeatherCubit, HomeWeatherState>(
@@ -106,6 +118,7 @@ class _HomeViewState extends State<_HomeView> {
                     title: "Today's Weather",
                     locationLabel: _locationController.locationLabel,
                     locationNote: _locationController.locationNote,
+                    temperatureUnit: _temperatureUnit,
                     onLocationTap: () =>
                         _locationController.promptForLocation(context),
                   );
@@ -121,6 +134,7 @@ class _HomeViewState extends State<_HomeView> {
                     title: "Today's Weather",
                     locationLabel: _locationController.locationLabel,
                     locationNote: _locationController.locationNote,
+                    temperatureUnit: _temperatureUnit,
                     onLocationTap: () =>
                         _locationController.promptForLocation(context),
                   );
@@ -134,6 +148,7 @@ class _HomeViewState extends State<_HomeView> {
                   title: "Today's Weather",
                   locationLabel: _locationController.locationLabel,
                   locationNote: _locationController.locationNote,
+                  temperatureUnit: _temperatureUnit,
                   onLocationTap: () =>
                       _locationController.promptForLocation(context),
                 );
