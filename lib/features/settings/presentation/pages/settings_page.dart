@@ -3,13 +3,64 @@ import 'package:water_it/core/layout/app_layout.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
 import 'package:water_it/core/widgets/app_bars/sliver_page_header.dart';
 
-class SettingsPage extends StatelessWidget {
-  const SettingsPage({super.key});
+enum SettingsSection {
+  notifications,
+  weather,
+  about,
+}
+
+class SettingsPage extends StatefulWidget {
+  const SettingsPage({
+    super.key,
+    this.initialSection,
+  });
+
+  final SettingsSection? initialSection;
+
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  final ScrollController _scrollController = ScrollController();
+  late final Map<SettingsSection, GlobalKey> _sectionKeys = {
+    SettingsSection.notifications: GlobalKey(),
+    SettingsSection.weather: GlobalKey(),
+    SettingsSection.about: GlobalKey(),
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final section = widget.initialSection;
+      if (section != null) {
+        _scrollToSection(section);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToSection(SettingsSection section) {
+    final targetContext = _sectionKeys[section]?.currentContext;
+    if (targetContext == null) {
+      return;
+    }
+    Scrollable.ensureVisible(
+      targetContext,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final spacing = Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
-    final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
       body: LayoutBuilder(
@@ -23,6 +74,7 @@ class SettingsPage extends StatelessWidget {
               constraints: BoxConstraints(maxWidth: contentMax),
               child: SafeArea(
                 child: CustomScrollView(
+                  controller: _scrollController,
                   slivers: [
                     SliverPageHeader(
                       title: 'Settings',
@@ -38,74 +90,55 @@ class SettingsPage extends StatelessWidget {
                       sliver: SliverList(
                         delegate: SliverChildListDelegate(
                           [
-                            _SettingsSection(
-                              title: 'Account',
-                              children: const [
-                                _SettingsTile(
-                                  title: 'Profile',
-                                  subtitle: 'Update your details and avatar.',
-                                ),
-                                _SettingsTile(
-                                  title: 'Sign in',
-                                  subtitle: 'Connect to sync across devices.',
-                                ),
-                              ],
+                            KeyedSubtree(
+                              key: _sectionKeys[SettingsSection.notifications],
+                              child: _SettingsSection(
+                                title: 'Notifications',
+                                children: const [
+                                  _SettingsTile(
+                                    title: 'Watering reminders',
+                                    subtitle: 'Manage reminder schedule.',
+                                  ),
+                                  _SettingsTile(
+                                    title: 'Daily summary',
+                                    subtitle: 'Get a quick morning snapshot.',
+                                  ),
+                                ],
+                              ),
                             ),
                             SizedBox(height: spacing.md),
-                            _SettingsSection(
-                              title: 'Notifications',
-                              children: const [
-                                _SettingsTile(
-                                  title: 'Watering reminders',
-                                  subtitle: 'Manage reminder schedule.',
-                                ),
-                                _SettingsTile(
-                                  title: 'Daily summary',
-                                  subtitle: 'Get a quick morning snapshot.',
-                                ),
-                              ],
+                            KeyedSubtree(
+                              key: _sectionKeys[SettingsSection.weather],
+                              child: _SettingsSection(
+                                title: 'Weather',
+                                children: const [
+                                  _SettingsTile(
+                                    title: 'Location',
+                                    subtitle: 'Choose device or city.',
+                                  ),
+                                  _SettingsTile(
+                                    title: 'Units',
+                                    subtitle: 'Switch between C and F.',
+                                  ),
+                                ],
+                              ),
                             ),
                             SizedBox(height: spacing.md),
-                            _SettingsSection(
-                              title: 'Weather',
-                              children: const [
-                                _SettingsTile(
-                                  title: 'Location',
-                                  subtitle: 'Choose device or city.',
-                                ),
-                                _SettingsTile(
-                                  title: 'Units',
-                                  subtitle: 'Switch between C and F.',
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: spacing.md),
-                            _SettingsSection(
-                              title: 'Data',
-                              children: const [
-                                _SettingsTile(
-                                  title: 'Backup & Restore',
-                                  subtitle: 'Sync or export plant data.',
-                                ),
-                                _SettingsTile(
-                                  title: 'Export',
-                                  subtitle: 'Save a local copy for offline use.',
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: spacing.md),
-                            _SettingsSection(
-                              title: 'About',
-                              children: const [
-                                _SettingsTile(
-                                  title: 'App version',
-                                  subtitle: 'Build 0.1.0',
-                                ),
-                                _SettingsTile(
-                                  title: 'Licenses',
-                                  subtitle: 'View open source attributions.',
-                                ),
-                              ],
+                            KeyedSubtree(
+                              key: _sectionKeys[SettingsSection.about],
+                              child: _SettingsSection(
+                                title: 'About',
+                                children: const [
+                                  _SettingsTile(
+                                    title: 'App version',
+                                    subtitle: 'Build 0.1.0',
+                                  ),
+                                  _SettingsTile(
+                                    title: 'Licenses',
+                                    subtitle: 'View open source attributions.',
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
