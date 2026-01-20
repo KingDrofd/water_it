@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
 import 'package:water_it/features/plants/domain/entities/plant.dart';
+import 'package:water_it/features/plants/presentation/utils/plant_form_handlers.dart';
 
 class ReminderDraft {
   ReminderDraft({
@@ -104,6 +105,64 @@ class ReminderInputRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class ReminderInputList extends StatelessWidget {
+  final List<ReminderDraft> reminders;
+  final ReminderHandlers handlers;
+  final VoidCallback onChanged;
+
+  const ReminderInputList({
+    super.key,
+    required this.reminders,
+    required this.handlers,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (reminders.isEmpty) {
+      return Text(
+        'No reminders yet.',
+        style: Theme.of(context).textTheme.bodySmall,
+      );
+    }
+
+    final spacing = Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
+    return Column(
+      children: reminders
+          .map(
+            (reminder) => Padding(
+              padding: EdgeInsets.only(bottom: spacing.sm),
+              child: ReminderInputRow(
+                reminder: reminder,
+                onPickTime: () => handlers.pickTime(
+                  context: context,
+                  reminder: reminder,
+                  onChanged: onChanged,
+                ),
+                onClearTime: () => handlers.clearTime(
+                  reminder: reminder,
+                  onChanged: onChanged,
+                ),
+                onToggleDay: (day) => handlers.toggleDay(
+                  reminder: reminder,
+                  day: day,
+                  onChanged: onChanged,
+                ),
+                onRemove: reminders.length > 1
+                    ? () => handlers.removeReminder(
+                          reminders: reminders,
+                          reminder: reminder,
+                          onChanged: onChanged,
+                        )
+                    : null,
+              ),
+            ),
+          )
+          .toList(),
     );
   }
 }

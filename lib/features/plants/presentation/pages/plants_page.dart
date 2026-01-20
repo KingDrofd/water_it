@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:water_it/core/layout/app_breakpoints.dart';
@@ -43,10 +41,7 @@ class _PlantsPageState extends State<PlantsPage> {
           slivers: [
             SliverToBoxAdapter(
               child: SizedBox(
-                height: AppLayout.navBarInset(
-                  width,
-                  spacing: spacing.xxl + spacing.xxl,
-                ),
+                height: spacing.lg,
               ),
             ),
             SliverToBoxAdapter(
@@ -60,10 +55,7 @@ class _PlantsPageState extends State<PlantsPage> {
             ),
             SliverPadding(
               padding: EdgeInsets.only(
-                bottom: AppLayout.navBarInset(
-                  width,
-                  spacing: spacing.xxl,
-                ),
+                bottom: spacing.xxl,
               ),
               sliver: _buildBody(width, gutter, listState),
             ),
@@ -225,8 +217,15 @@ class _PlantsPageState extends State<PlantsPage> {
     if (!plant.useRandomImage) {
       return plant.imagePaths.first;
     }
-    final index = Random().nextInt(plant.imagePaths.length);
+    final index = _stableImageIndex(plant);
     return plant.imagePaths[index];
+  }
+
+  int _stableImageIndex(Plant plant) {
+    if (plant.imagePaths.isEmpty) {
+      return 0;
+    }
+    return plant.id.hashCode.abs() % plant.imagePaths.length;
   }
 
   Future<void> _confirmDelete(BuildContext context, Plant plant) async {

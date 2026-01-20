@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:water_it/core/di/service_locator.dart';
@@ -207,6 +205,6 @@ String? _displayImagePath(Plant plant) {
   if (!plant.useRandomImage) {
     return plant.imagePaths.first;
   }
-  final index = Random().nextInt(plant.imagePaths.length);
+  final index = plant.id.hashCode.abs() % plant.imagePaths.length;
   return plant.imagePaths[index];
 }

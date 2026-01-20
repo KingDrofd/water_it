@@ -218,7 +218,13 @@ class _PlantEditPageState extends State<PlantEditPage> {
                           soilController: _soilController,
                           originController: _originController,
                           labelStyle: labelStyle,
-                          reminderInputs: _buildReminderInputs(),
+                          reminderInputs: [
+                            ReminderInputList(
+                              reminders: _reminders,
+                              handlers: _reminderHandlers,
+                              onChanged: () => setState(() {}),
+                            ),
+                          ],
                           onAddReminder: () => setState(() {
                             _reminderHandlers.addReminder(
                               reminders: _reminders,
@@ -291,54 +297,6 @@ class _PlantEditPageState extends State<PlantEditPage> {
   String? _nullable(TextEditingController controller) {
     final value = controller.text.trim();
     return value.isEmpty ? null : value;
-  }
-
-  List<Widget> _buildReminderInputs() {
-    if (_reminders.isEmpty) {
-      return [
-        Text(
-          'No reminders yet.',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-      ];
-    }
-
-    final spacing = Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
-    return _reminders
-        .map(
-          (reminder) => Padding(
-            padding: EdgeInsets.only(bottom: spacing.sm),
-            child: ReminderInputRow(
-              reminder: reminder,
-              onPickTime: () => _reminderHandlers.pickTime(
-                context: context,
-                reminder: reminder,
-                onChanged: () => setState(() {}),
-              ),
-              onClearTime: () => _reminderHandlers.clearTime(
-                reminder: reminder,
-                onChanged: () => setState(() {}),
-              ),
-              onToggleDay: (day) => _reminderHandlers.toggleDay(
-                reminder: reminder,
-                day: day,
-                onChanged: () => setState(() {}),
-              ),
-              onRemove: _reminders.length > 1
-                  ? () {
-                      setState(() {
-                        _reminderHandlers.removeReminder(
-                          reminders: _reminders,
-                          reminder: reminder,
-                          onChanged: () {},
-                        );
-                      });
-                    }
-                  : null,
-            ),
-          ),
-        )
-        .toList();
   }
 
   Future<void> _pickImages() async {
