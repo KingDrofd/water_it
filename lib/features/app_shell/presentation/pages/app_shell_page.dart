@@ -7,6 +7,8 @@ import 'package:water_it/core/widgets/app_bars/app_bar_icon_button.dart';
 import 'package:water_it/core/widgets/app_bars/custom_app_bar.dart';
 import 'package:water_it/core/widgets/nav_bars/custom_nav_bar.dart';
 import 'package:water_it/core/widgets/nav_bars/nav_item.dart';
+import 'package:water_it/features/app_shell/presentation/pages/quick_action_info_page.dart';
+import 'package:water_it/features/settings/presentation/pages/settings_page.dart';
 import 'package:water_it/features/app_shell/presentation/widgets/quick_actions_drawer.dart';
 import 'package:water_it/features/home/presentation/pages/home_page.dart';
 import 'package:water_it/features/plants/presentation/pages/plants_page.dart';
@@ -58,7 +60,9 @@ class _AppShellPageState extends State<AppShellPage> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      drawer: const QuickActionsDrawer(),
+      drawer: QuickActionsDrawer(
+        onActionSelected: _handleQuickAction,
+      ),
       body: LayoutBuilder(
         builder: (context, constraints) {
           final width = constraints.maxWidth;
@@ -139,5 +143,79 @@ class _AppShellPageState extends State<AppShellPage> {
         },
       ),
     );
+  }
+
+  void _handleQuickAction(QuickAction action) {
+    Navigator.of(context).maybePop();
+    if (!mounted) {
+      return;
+    }
+
+    switch (action) {
+      case QuickAction.myPlants:
+        _setIndex(1);
+        return;
+      case QuickAction.settings:
+        _openSettings();
+        return;
+      case QuickAction.backupRestore:
+        _openQuickActionInfo(
+          title: 'Backup & Restore',
+          description:
+              'Save your plant data and bring it back on a new device.',
+          icon: Icons.backup,
+        );
+        return;
+      case QuickAction.about:
+        _openQuickActionInfo(
+          title: 'About',
+          description:
+              'Learn more about Water It and the ideas behind the app.',
+          icon: Icons.info_outline,
+        );
+        return;
+      case QuickAction.feedback:
+        _openQuickActionInfo(
+          title: 'Feedback',
+          description:
+              'Share bugs, ideas, or feature requests so we can keep improving.',
+          icon: Icons.feedback_outlined,
+        );
+        return;
+    }
+  }
+
+  void _openQuickActionInfo({
+    required String title,
+    required String description,
+    required IconData icon,
+  }) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => QuickActionInfoPage(
+            title: title,
+            description: description,
+            icon: icon,
+          ),
+        ),
+      );
+    });
+  }
+
+  void _openSettings() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const SettingsPage(),
+        ),
+      );
+    });
   }
 }

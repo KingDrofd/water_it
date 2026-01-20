@@ -8,7 +8,7 @@ import 'package:water_it/features/plants/domain/entities/plant.dart';
 import 'package:water_it/features/plants/presentation/bloc/plant_form_cubit.dart';
 import 'package:water_it/features/plants/presentation/bloc/plant_list_cubit.dart';
 import 'package:water_it/features/plants/presentation/widgets/plant_form_content.dart';
-import 'package:water_it/features/plants/presentation/widgets/plant_form_header.dart';
+import 'package:water_it/core/widgets/app_bars/sliver_page_header.dart';
 import 'package:water_it/features/plants/presentation/widgets/reminder_widgets.dart';
 import 'package:water_it/features/plants/presentation/utils/plant_form_handlers.dart';
 
@@ -105,7 +105,7 @@ class _PlantFormPageState extends State<PlantFormPage> {
           body: SafeArea(
             child: CustomScrollView(
               slivers: [
-                PlantFormHeader(
+                SliverPageHeader(
                   title: 'Add Plant',
                   onBack: () => Navigator.of(context).pop(),
                 ),

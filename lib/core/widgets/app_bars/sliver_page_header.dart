@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
 import 'package:water_it/core/widgets/app_bars/app_bar_icon_button.dart';
 
-class PlantFormHeader extends StatelessWidget {
+class SliverPageHeader extends StatelessWidget {
   final String title;
   final VoidCallback onBack;
   final double height;
 
-  const PlantFormHeader({
+  const SliverPageHeader({
     super.key,
     required this.title,
     required this.onBack,
@@ -18,7 +18,7 @@ class PlantFormHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return SliverPersistentHeader(
       pinned: true,
-      delegate: _PlantFormHeaderDelegate(
+      delegate: _SliverPageHeaderDelegate(
         height: height,
         title: title,
         onBack: onBack,
@@ -27,12 +27,12 @@ class PlantFormHeader extends StatelessWidget {
   }
 }
 
-class _PlantFormHeaderDelegate extends SliverPersistentHeaderDelegate {
+class _SliverPageHeaderDelegate extends SliverPersistentHeaderDelegate {
   final double height;
   final String title;
   final VoidCallback onBack;
 
-  _PlantFormHeaderDelegate({
+  _SliverPageHeaderDelegate({
     required this.height,
     required this.title,
     required this.onBack,
@@ -83,7 +83,7 @@ class _PlantFormHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  bool shouldRebuild(covariant _PlantFormHeaderDelegate oldDelegate) {
+  bool shouldRebuild(covariant _SliverPageHeaderDelegate oldDelegate) {
     return oldDelegate.title != title || oldDelegate.height != height;
   }
 }
