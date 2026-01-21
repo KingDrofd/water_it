@@ -27,6 +27,8 @@ class PlantImagePickerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final spacing = Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
     final colorScheme = Theme.of(context).colorScheme;
+    final inputFill = Theme.of(context).inputDecorationTheme.fillColor ??
+        const Color(0xFFF2F2F2);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -37,7 +39,7 @@ class PlantImagePickerCard extends StatelessWidget {
           child: Container(
             height: 140,
             decoration: BoxDecoration(
-              color: colorScheme.surfaceVariant,
+              color: inputFill,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Center(

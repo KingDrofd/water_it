@@ -55,19 +55,19 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.surfaceVariant,
+        fillColor: const Color(0xFFF2F2F2),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.outline),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.outline),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.primary),
+          borderSide: BorderSide.none,
         ),
         labelStyle: textTheme.labelLarge?.copyWith(
           color: AppColors.muted,
@@ -88,6 +88,14 @@ class AppTheme {
           borderRadius: BorderRadius.circular(16),
         ),
         margin: EdgeInsets.zero,
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
+            return Colors.white;
+          }
+          return null;
+        }),
       ),
       iconTheme: const IconThemeData(color: AppColors.ink),
       extensions: const [AppSpacing()],
