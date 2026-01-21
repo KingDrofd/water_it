@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:water_it/core/di/service_locator.dart';
 import 'package:water_it/core/layout/app_layout.dart';
+import 'package:water_it/core/notifications/notification_service.dart';
+import 'package:water_it/core/settings/app_settings.dart';
 import 'package:water_it/core/widgets/app_bars/app_bar_elements.dart';
 import 'package:water_it/core/widgets/app_bars/app_bar_icon_button.dart';
 import 'package:water_it/core/widgets/app_bars/custom_app_bar.dart';
@@ -17,6 +20,8 @@ import 'package:water_it/features/plants/presentation/pages/plant_form_page.dart
 import 'package:water_it/features/plants/presentation/bloc/plant_list_cubit.dart';
 import 'package:water_it/features/profile/presentation/pages/profile_page.dart';
 import 'package:water_it/features/scan/presentation/pages/scan_page.dart';
+import 'package:water_it/features/home/presentation/utils/home_location_controller.dart';
+import 'package:water_it/features/feedback/presentation/pages/feedback_page.dart';
 
 class AppShellPage extends StatefulWidget {
   const AppShellPage({super.key});
@@ -49,6 +54,15 @@ class _AppShellPageState extends State<AppShellPage> {
     'Scan',
     'Profile',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _requestNotificationPermission();
+      _requestWeatherLocation();
+    });
+  }
 
   void _setIndex(int index) {
     setState(() {
@@ -213,12 +227,7 @@ class _AppShellPageState extends State<AppShellPage> {
         );
         return;
       case QuickAction.feedback:
-        _openQuickActionInfo(
-          title: 'Feedback',
-          description:
-              'Share bugs, ideas, or feature requests so we can keep improving.',
-          icon: Icons.feedback_outlined,
-        );
+        _openFeedback();
         return;
     }
   }
@@ -255,5 +264,111 @@ class _AppShellPageState extends State<AppShellPage> {
         ),
       );
     });
+  }
+
+  void _openFeedback() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const FeedbackPage(),
+        ),
+      );
+    });
+  }
+
+  Future<void> _requestNotificationPermission() async {
+    final enabled = await AppSettings.getWateringRemindersEnabled();
+    if (!enabled || !mounted) {
+      return;
+    }
+    final prompted = await AppSettings.getNotificationPrompted();
+    if (prompted || !mounted) {
+      return;
+    }
+    final allow = await _showNotificationPrompt(
+      title: 'Enable reminders?',
+      message:
+          'Water It can remind you to water plants at your chosen times.',
+      allowLabel: 'Allow',
+    );
+    await AppSettings.setNotificationPrompted(true);
+    if (!allow || !mounted) {
+      await AppSettings.setWateringRemindersEnabled(false);
+      return;
+    }
+    final service = getIt<NotificationService>();
+    final granted = await service.requestPermissions();
+    if (!granted) {
+      await AppSettings.setWateringRemindersEnabled(false);
+    }
+  }
+
+  Future<void> _requestWeatherLocation() async {
+    if (!mounted) {
+      return;
+    }
+    final controller = HomeLocationController(
+      loadWeather: (_, __) async {},
+      setState: (_) {},
+      showError: (_) {},
+    );
+    await controller.restorePreference(context, promptIfUnset: false);
+    final shouldPrompt = !controller.hasActiveLocation && !controller.didPrompt;
+    controller.dispose();
+    if (!shouldPrompt || !mounted) {
+      return;
+    }
+    final prompted = await AppSettings.getWeatherPrompted();
+    if (prompted || !mounted) {
+      return;
+    }
+
+    final allow = await _showNotificationPrompt(
+      title: 'Show local weather?',
+      message:
+          'Water It can also show local weather to help plan plant care.',
+      allowLabel: 'Choose',
+    );
+    await AppSettings.setWeatherPrompted(true);
+    if (!allow || !mounted) {
+      return;
+    }
+    final promptController = HomeLocationController(
+      loadWeather: (_, __) async {},
+      setState: (_) {},
+      showError: (_) {},
+    );
+    await promptController.promptForLocation(context);
+    promptController.dispose();
+  }
+
+  Future<bool> _showNotificationPrompt({
+    required String title,
+    required String message,
+    required String allowLabel,
+  }) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: Text(title),
+              content: Text(message),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Not now'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: Text(allowLabel),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
   }
 }
