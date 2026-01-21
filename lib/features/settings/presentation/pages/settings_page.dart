@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:water_it/core/di/service_locator.dart';
@@ -16,7 +17,10 @@ enum SettingsSection {
   about,
 }
 
-const bool _showDebugNotifications = false;
+const bool _enableNotificationDebug = bool.fromEnvironment(
+  'ENABLE_NOTIFICATION_DEBUG',
+  defaultValue: false,
+);
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({
@@ -248,7 +252,6 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final spacing = Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
-
     return Scaffold(
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -284,14 +287,15 @@ class _SettingsPageState extends State<SettingsPage> {
                                 children: [
                                   SettingsSwitchTile(
                                     title: 'Watering reminders',
-                                    subtitle: 'Manage reminder schedule.',
+                                    subtitle:
+                                        'Get reminders on your chosen days and time.\nTimes follow your device time zone.',
                                     value: _wateringReminders,
                                     isLoading: _isLoading,
                                     onChanged: _updateWateringReminders,
                                   ),
                                   SettingsSwitchTile(
                                     title: 'Daily summary',
-                                    subtitle: 'Get a quick morning snapshot.',
+                                    subtitle: 'A short recap delivered each morning.',
                                     value: _dailySummary,
                                     isLoading: _isLoading,
                                     onChanged: (value) async {
@@ -302,7 +306,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                           .setDailySummaryEnabled(value);
                                     },
                                   ),
-                                  if (_showDebugNotifications)
+                                  if (_enableNotificationDebug && kDebugMode)
                                     SettingsTile(
                                       title: 'Send scheduled test notification',
                                       subtitle: 'Schedules a notification in 10s.',
@@ -310,7 +314,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                           ? null
                                           : () => _sendTestNotification(context),
                                     ),
-                                  if (_showDebugNotifications)
+                                  if (_enableNotificationDebug && kDebugMode)
                                     SettingsTile(
                                       title: 'Send immediate test notification',
                                       subtitle: 'Fires a notification right now.',
@@ -318,7 +322,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                           ? null
                                           : () => _sendImmediateTest(context),
                                     ),
-                                  if (_showDebugNotifications)
+                                  if (_enableNotificationDebug && kDebugMode)
                                     SettingsTile(
                                       title: 'Open app settings',
                                       subtitle: 'Enable Alarms & reminders permission.',
@@ -326,7 +330,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                           ? null
                                           : () => _openAppSettings(context),
                                     ),
-                                  if (_showDebugNotifications)
+                                  if (_enableNotificationDebug && kDebugMode)
                                     SettingsTile(
                                       title: 'Request exact alarms permission',
                                       subtitle: 'Ask Android for exact scheduling.',
@@ -338,7 +342,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                 ],
                               ),
                             ),
-                            SizedBox(height: spacing.md),
+                            SizedBox(height: spacing.sm),
                             KeyedSubtree(
                               key: _sectionKeys[SettingsSection.weather],
                               child: SettingsSectionCard(
@@ -364,7 +368,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                 ],
                               ),
                             ),
-                            SizedBox(height: spacing.md),
+                            SizedBox(height: spacing.sm),
                             KeyedSubtree(
                               key: _sectionKeys[SettingsSection.about],
                               child: SettingsSectionCard(

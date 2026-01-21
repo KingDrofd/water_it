@@ -9,6 +9,8 @@ class HomeReminderStrip extends StatelessWidget {
   final ColorScheme colorScheme;
   final List<HomeReminderItem> items;
   final ValueChanged<HomeReminderItem>? onTapItem;
+  final VoidCallback? onEmptyAction;
+  final String? emptyActionLabel;
 
   const HomeReminderStrip({
     super.key,
@@ -17,6 +19,8 @@ class HomeReminderStrip extends StatelessWidget {
     required this.colorScheme,
     required this.items,
     this.onTapItem,
+    this.onEmptyAction,
+    this.emptyActionLabel,
   });
 
   @override
@@ -29,11 +33,20 @@ class HomeReminderStrip extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: colorScheme.outline),
         ),
-        child: Center(
-          child: Text(
-            'No reminders yet.',
-            style: textTheme.bodySmall,
-          ),
+        child: Column(
+          children: [
+            Text(
+              'No reminders yet.',
+              style: textTheme.bodySmall,
+            ),
+            if (onEmptyAction != null && emptyActionLabel != null) ...[
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: onEmptyAction,
+                child: Text(emptyActionLabel!),
+              ),
+            ],
+          ],
         ),
       );
     }

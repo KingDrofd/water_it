@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:water_it/core/di/service_locator.dart';
 import 'package:water_it/core/layout/app_layout.dart';
@@ -10,6 +11,7 @@ import 'package:water_it/features/home/presentation/utils/home_location_controll
 import 'package:water_it/features/home/presentation/widgets/home_reminder_strip.dart';
 import 'package:water_it/features/home/presentation/widgets/home_weather_section.dart';
 import 'package:water_it/features/plants/presentation/bloc/plant_list_cubit.dart';
+import 'package:water_it/features/plants/presentation/pages/plant_form_page.dart';
 import 'package:water_it/features/plants/presentation/pages/plant_detail_page.dart';
 
 class HomePage extends StatelessWidget {
@@ -61,7 +63,7 @@ class _HomeViewState extends State<_HomeView> {
       showError: _showError,
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _locationController.restorePreference(context);
+      _locationController.restorePreference(context, promptIfUnset: false);
     });
   }
 
@@ -144,6 +146,9 @@ class _HomeViewState extends State<_HomeView> {
                     locationLabel: _locationController.locationLabel,
                     locationNote: _locationController.locationNote,
                     temperatureUnit: _temperatureUnit,
+                    onRetry: () {
+                      _locationController.restorePreference(context);
+                    },
                     onLocationTap: () =>
                         _locationController.promptForLocation(context),
                   );
@@ -168,18 +173,44 @@ class _HomeViewState extends State<_HomeView> {
             SizedBox(height: spacing.sm),
             BlocBuilder<HomeReminderCubit, HomeReminderState>(
               builder: (context, reminderState) {
-                return HomeReminderStrip(
-                  spacing: spacing,
-                  textTheme: textTheme,
-                  colorScheme: colorScheme,
-                  items: reminderState.items,
-                  onTapItem: (item) {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => PlantDetailPage(plantId: item.plantId),
+                final nextReminder = reminderState.items.isEmpty
+                    ? null
+                    : reminderState.items.first;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (nextReminder != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          'Next: ${DateFormat('EEE h:mm a').format(nextReminder.dueAt)}'
+                          ' - ${nextReminder.plantName}',
+                          style: textTheme.bodySmall,
+                        ),
                       ),
-                    );
-                  },
+                    HomeReminderStrip(
+                      spacing: spacing,
+                      textTheme: textTheme,
+                      colorScheme: colorScheme,
+                      items: reminderState.items,
+                      onEmptyAction: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const PlantFormPage(),
+                          ),
+                        );
+                      },
+                      emptyActionLabel: 'Add a plant',
+                      onTapItem: (item) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                PlantDetailPage(plantId: item.plantId),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 );
               },
             ),

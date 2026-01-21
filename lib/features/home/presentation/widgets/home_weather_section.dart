@@ -43,6 +43,7 @@ class HomeWeatherSection extends StatelessWidget {
   final String locationNote;
   final TemperatureUnit temperatureUnit;
   final VoidCallback? onLocationTap;
+  final VoidCallback? onRetry;
 
   const HomeWeatherSection({
     super.key,
@@ -56,6 +57,7 @@ class HomeWeatherSection extends StatelessWidget {
     required this.locationNote,
     required this.temperatureUnit,
     this.onLocationTap,
+    this.onRetry,
     this.isPlaceholder = false,
     this.errorMessage,
   });
@@ -110,10 +112,22 @@ class HomeWeatherSection extends StatelessWidget {
             height: 150,
             child: errorMessage != null
                 ? Center(
-                    child: Text(
-                      errorMessage!,
-                      style: textTheme.bodySmall,
-                      textAlign: TextAlign.center,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          errorMessage!,
+                          style: textTheme.bodySmall,
+                          textAlign: TextAlign.center,
+                        ),
+                        if (onRetry != null) ...[
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: onRetry,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ],
                     ),
                   )
                 : Row(

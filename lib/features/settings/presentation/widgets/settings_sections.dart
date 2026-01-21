@@ -24,7 +24,7 @@ class SettingsSectionCard extends StatelessWidget {
           title,
           style: textTheme.titleMedium,
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Card(
           margin: EdgeInsets.zero,
           color: inputFill,
@@ -37,7 +37,7 @@ class SettingsSectionCard extends StatelessWidget {
               for (var i = 0; i < children.length; i++) ...[
                 if (i > 0)
                   Divider(
-                    height: 12,
+                    height: 8,
                     thickness: 1,
                     indent: 16,
                     endIndent: 16,

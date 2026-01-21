@@ -35,6 +35,7 @@ class _PlantEditPageState extends State<PlantEditPage> {
   final List<ReminderDraft> _reminders = [];
   final List<String> _imagePaths = [];
   bool _useRandomImage = false;
+  bool _showReminderWeekdayError = false;
   static const int _maxImages = 4;
   final PlantImageHandler _imageHandler =
       PlantImageHandler(maxImages: _maxImages);
@@ -98,12 +99,14 @@ class _PlantEditPageState extends State<PlantEditPage> {
         ..clear()
         ..addAll(plant.imagePaths);
       _useRandomImage = plant.useRandomImage;
+      _showReminderWeekdayError = false;
     });
   }
   @override
   Widget build(BuildContext context) {
     final spacing = Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
     final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
     final labelStyle = textTheme.labelLarge?.copyWith(
       fontFamily: 'Quicksand',
       fontWeight: FontWeight.w600,
@@ -222,14 +225,27 @@ class _PlantEditPageState extends State<PlantEditPage> {
                             ReminderInputList(
                               reminders: _reminders,
                               handlers: _reminderHandlers,
-                              onChanged: () => setState(() {}),
+                              onChanged: () => setState(() {
+                                _showReminderWeekdayError = false;
+                              }),
                             ),
+                            if (_showReminderWeekdayError)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  'Select at least one weekday for reminders.',
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.error,
+                                  ),
+                                ),
+                              ),
                           ],
                           onAddReminder: () => setState(() {
                             _reminderHandlers.addReminder(
                               reminders: _reminders,
                               onChanged: () {},
                             );
+                            _showReminderWeekdayError = false;
                           }),
                           saveButton: BlocBuilder<PlantFormCubit, PlantFormState>(
                             builder: (context, formState) {
@@ -347,11 +363,9 @@ class _PlantEditPageState extends State<PlantEditPage> {
         continue;
       }
       if (reminder.weekdays.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Select at least one weekday for reminders.'),
-          ),
-        );
+        setState(() {
+          _showReminderWeekdayError = true;
+        });
         return null;
       }
       reminders.add(
