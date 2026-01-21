@@ -42,11 +42,20 @@ class HomeWeatherCubit extends Cubit<HomeWeatherState> {
     required double lat,
     required double lon,
   }) async {
+    if (isClosed) {
+      return;
+    }
     emit(state.copyWith(status: HomeWeatherStatus.loading, errorMessage: null));
     try {
       final slots = await _getWeatherSlots(lat: lat, lon: lon);
+      if (isClosed) {
+        return;
+      }
       emit(state.copyWith(status: HomeWeatherStatus.loaded, slots: slots));
     } catch (error) {
+      if (isClosed) {
+        return;
+      }
       emit(
         state.copyWith(
           status: HomeWeatherStatus.failure,
