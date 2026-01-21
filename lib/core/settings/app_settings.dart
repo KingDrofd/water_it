@@ -43,6 +43,8 @@ class AppSettings {
   static const _keyTempUnit = 'settings_temperature_unit';
   static const _keyWateringReminders = 'settings_notify_watering_reminders';
   static const _keyDailySummary = 'settings_notify_daily_summary';
+  static const _keyNotificationPrompted = 'settings_notify_prompted';
+  static const _keyWeatherPrompted = 'settings_weather_prompted';
   static const _keyLastNotificationSchedule = 'debug_last_notification_schedule';
   static const _keyLastNotificationTest = 'debug_last_notification_test';
   static final temperatureUnitNotifier =
@@ -82,6 +84,26 @@ class AppSettings {
   static Future<void> setDailySummaryEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyDailySummary, enabled);
+  }
+
+  static Future<bool> getNotificationPrompted() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyNotificationPrompted) ?? false;
+  }
+
+  static Future<void> setNotificationPrompted(bool prompted) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyNotificationPrompted, prompted);
+  }
+
+  static Future<bool> getWeatherPrompted() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyWeatherPrompted) ?? false;
+  }
+
+  static Future<void> setWeatherPrompted(bool prompted) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyWeatherPrompted, prompted);
   }
 
   static Future<void> setLastNotificationSchedule(DateTime? time) async {

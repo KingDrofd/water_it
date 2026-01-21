@@ -31,7 +31,10 @@ class HomeLocationController {
     cityController.dispose();
   }
 
-  Future<void> restorePreference(BuildContext context) async {
+  Future<void> restorePreference(
+    BuildContext context, {
+    bool promptIfUnset = true,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final choice = prefs.getString(_prefsKeyChoice);
     if (choice == _prefChoiceDevice) {
@@ -48,7 +51,7 @@ class HomeLocationController {
       });
     }
 
-    if (!hasActiveLocation) {
+    if (!hasActiveLocation && promptIfUnset) {
       didPrompt = false;
       await promptForLocation(context);
     }
@@ -61,35 +64,35 @@ class HomeLocationController {
     didPrompt = true;
     _LocationChoice? choice;
     try {
-      choice = await showModalBottomSheet<_LocationChoice>(
+      choice = await showDialog<_LocationChoice>(
         context: context,
-        showDragHandle: true,
         builder: (context) {
-          return SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Choose weather location',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 16),
-                  ListTile(
-                    leading: const Icon(Icons.my_location),
-                    title: const Text('Use device location'),
-                    onTap: () =>
-                        Navigator.of(context).pop(_LocationChoice.device),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.location_city_outlined),
-                    title: const Text('Enter a city'),
-                    onTap: () =>
-                        Navigator.of(context).pop(_LocationChoice.city),
-                  ),
-                ],
-              ),
+          return AlertDialog(
+            title: const Text('Set weather location'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Water It can also show local weather to help plan plant care.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(Icons.my_location),
+                  title: const Text('Use device location'),
+                  subtitle: const Text('Auto updates based on where you are.'),
+                  onTap: () =>
+                      Navigator.of(context).pop(_LocationChoice.device),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.location_city_outlined),
+                  title: const Text('Choose a city'),
+                  subtitle: const Text('Stay fixed to a single city.'),
+                  onTap: () =>
+                      Navigator.of(context).pop(_LocationChoice.city),
+                ),
+              ],
             ),
           );
         },
