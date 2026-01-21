@@ -34,6 +34,11 @@ migrate_working_dir/
 /coverage/
 codex_referencing/
 
+# Local tooling and experiments
+devtools_options.yaml
+lib/core/widgets/app_bars/system_app_bar.dart
+lib/core/widgets/nav_bars/system_nav_bar.dart
+
 # Symbolication related
 app.*.symbols
 
