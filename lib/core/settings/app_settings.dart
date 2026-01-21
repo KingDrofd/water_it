@@ -43,6 +43,8 @@ class AppSettings {
   static const _keyTempUnit = 'settings_temperature_unit';
   static const _keyWateringReminders = 'settings_notify_watering_reminders';
   static const _keyDailySummary = 'settings_notify_daily_summary';
+  static const _keyLastNotificationSchedule = 'debug_last_notification_schedule';
+  static const _keyLastNotificationTest = 'debug_last_notification_test';
   static final temperatureUnitNotifier =
       ValueNotifier<TemperatureUnit>(TemperatureUnit.celsius);
 
@@ -80,5 +82,41 @@ class AppSettings {
   static Future<void> setDailySummaryEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyDailySummary, enabled);
+  }
+
+  static Future<void> setLastNotificationSchedule(DateTime? time) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (time == null) {
+      await prefs.remove(_keyLastNotificationSchedule);
+      return;
+    }
+    await prefs.setString(_keyLastNotificationSchedule, time.toIso8601String());
+  }
+
+  static Future<DateTime?> getLastNotificationSchedule() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getString(_keyLastNotificationSchedule);
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+    return DateTime.tryParse(value);
+  }
+
+  static Future<void> setLastNotificationTest(DateTime? time) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (time == null) {
+      await prefs.remove(_keyLastNotificationTest);
+      return;
+    }
+    await prefs.setString(_keyLastNotificationTest, time.toIso8601String());
+  }
+
+  static Future<DateTime?> getLastNotificationTest() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getString(_keyLastNotificationTest);
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+    return DateTime.tryParse(value);
   }
 }

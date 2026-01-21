@@ -52,3 +52,6 @@ app.*.map.json
 
 # Local-only docs
 docs/
+
+# Local vendor experiments
+third_party/

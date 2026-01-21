@@ -15,6 +15,8 @@ import 'package:water_it/features/home/domain/repositories/weather_repository.da
 import 'package:water_it/features/home/domain/usecases/get_weather_slots.dart';
 import 'package:water_it/features/home/presentation/bloc/home_weather_cubit.dart';
 import 'package:water_it/features/home/presentation/bloc/home_reminder_cubit.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:water_it/core/notifications/notification_service.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -48,9 +50,19 @@ Future<void> setupLocator() async {
     dependsOn: [PlantsRepository],
   );
 
+  getIt.registerSingletonAsync<NotificationService>(() async {
+    final service = NotificationService(FlutterLocalNotificationsPlugin());
+    await service.initialize();
+    return service;
+  });
+
   getIt.registerSingletonWithDependencies<PlantListCubit>(
-    () => PlantListCubit(getIt<GetPlants>(), getIt<DeletePlant>()),
-    dependsOn: [GetPlants, DeletePlant],
+    () => PlantListCubit(
+      getIt<GetPlants>(),
+      getIt<DeletePlant>(),
+      getIt<NotificationService>(),
+    ),
+    dependsOn: [GetPlants, DeletePlant, NotificationService],
   );
 
   getIt.registerLazySingleton<OpenWeatherDataSource>(

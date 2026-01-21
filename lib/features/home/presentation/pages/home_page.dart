@@ -9,6 +9,7 @@ import 'package:water_it/features/home/presentation/bloc/home_reminder_cubit.dar
 import 'package:water_it/features/home/presentation/utils/home_location_controller.dart';
 import 'package:water_it/features/home/presentation/widgets/home_reminder_strip.dart';
 import 'package:water_it/features/home/presentation/widgets/home_weather_section.dart';
+import 'package:water_it/features/plants/presentation/bloc/plant_list_cubit.dart';
 import 'package:water_it/features/plants/presentation/pages/plant_detail_page.dart';
 
 class HomePage extends StatelessWidget {
@@ -25,7 +26,15 @@ class HomePage extends StatelessWidget {
           create: (_) => getIt<HomeReminderCubit>()..loadNextReminders(),
         ),
       ],
-      child: const _HomeView(),
+      child: BlocListener<PlantListCubit, PlantListState>(
+        listenWhen: (previous, current) =>
+            previous.status != current.status ||
+            previous.plants.length != current.plants.length,
+        listener: (context, state) {
+          context.read<HomeReminderCubit>().loadNextReminders();
+        },
+        child: const _HomeView(),
+      ),
     );
   }
 }

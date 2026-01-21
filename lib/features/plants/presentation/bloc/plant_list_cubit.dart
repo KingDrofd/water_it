@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:water_it/core/notifications/notification_service.dart';
 import 'package:water_it/features/plants/domain/entities/plant.dart';
 import 'package:water_it/features/plants/domain/usecases/delete_plant.dart';
 import 'package:water_it/features/plants/domain/usecases/get_plants.dart';
@@ -34,11 +35,12 @@ class PlantListState extends Equatable {
 }
 
 class PlantListCubit extends Cubit<PlantListState> {
-  PlantListCubit(this._getPlants, this._deletePlant)
+  PlantListCubit(this._getPlants, this._deletePlant, this._notificationService)
       : super(const PlantListState());
 
   final GetPlants _getPlants;
   final DeletePlant _deletePlant;
+  final NotificationService _notificationService;
 
   Future<void> loadPlants() async {
     emit(state.copyWith(status: PlantListStatus.loading, errorMessage: null));
@@ -57,6 +59,13 @@ class PlantListCubit extends Cubit<PlantListState> {
           errorMessage: error.toString(),
         ),
       );
+      return;
+    }
+
+    try {
+      await _notificationService.scheduleWateringReminders(state.plants);
+    } catch (_) {
+      // Ignore notification scheduling failures to avoid breaking plant loads.
     }
   }
 

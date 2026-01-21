@@ -97,10 +97,10 @@ class _DetailBody extends StatelessWidget {
                                 builder: (_) => PlantEditPage(plantId: plantId),
                               ),
                             )
-                            .then((didUpdate) {
+                            .then((didUpdate) async {
                           if (didUpdate == true) {
                             context.read<PlantDetailCubit>().loadPlant(plantId);
-                            getIt<PlantListCubit>().loadPlants();
+                            await getIt<PlantListCubit>().loadPlants();
                           }
                         });
                       },

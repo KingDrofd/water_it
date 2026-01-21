@@ -132,9 +132,9 @@ class _PlantEditPageState extends State<PlantEditPage> {
             },
           ),
           BlocListener<PlantFormCubit, PlantFormState>(
-            listener: (context, state) {
+            listener: (context, state) async {
               if (state.status == PlantFormStatus.success) {
-                getIt<PlantListCubit>().loadPlants();
+                await getIt<PlantListCubit>().loadPlants();
                 Navigator.of(context).pop(true);
               } else if (state.status == PlantFormStatus.failure) {
                 ScaffoldMessenger.of(context).showSnackBar(

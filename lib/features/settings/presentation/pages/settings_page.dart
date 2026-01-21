@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:water_it/core/di/service_locator.dart';
+import 'package:water_it/core/notifications/notification_service.dart';
 import 'package:water_it/core/layout/app_layout.dart';
 import 'package:water_it/core/settings/app_settings.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
 import 'package:water_it/core/widgets/app_bars/sliver_page_header.dart';
 import 'package:water_it/features/home/presentation/utils/home_location_controller.dart';
 import 'package:water_it/features/settings/presentation/widgets/settings_sections.dart';
+import 'package:water_it/features/plants/domain/usecases/get_plants.dart';
 
 enum SettingsSection {
   notifications,
   weather,
   about,
 }
+
+const bool _showDebugNotifications = false;
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({
@@ -102,6 +108,143 @@ class _SettingsPageState extends State<SettingsPage> {
     await _loadSettings();
   }
 
+  Future<void> _updateWateringReminders(bool value) async {
+    setState(() {
+      _wateringReminders = value;
+    });
+    await AppSettings.setWateringRemindersEnabled(value);
+
+    try {
+      final service = getIt<NotificationService>();
+      if (value) {
+        final granted = await service.requestPermissions();
+        if (!granted) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Notifications permission not granted.'),
+              ),
+            );
+          }
+          return;
+        }
+        final plants = await getIt<GetPlants>()();
+        await service.scheduleWateringReminders(plants);
+      } else {
+        await service.cancelAll();
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Notifications error: $error')),
+        );
+      }
+    }
+
+  }
+
+  Future<void> _sendTestNotification(BuildContext context) async {
+    try {
+      final service = getIt<NotificationService>();
+      final granted = await service.requestPermissions();
+      if (!granted) {
+        if (!mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Notifications permission not granted.')),
+        );
+        return;
+      }
+      await service.cancelAll();
+      final exact = await service.showTestNotification(
+        delay: const Duration(seconds: 10),
+      );
+      final pendingCount = await service.pendingCount();
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            exact
+                ? 'Test scheduled. Pending: $pendingCount.'
+                : 'Exact alarms not permitted; pending: $pendingCount.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Test notification failed: $error')),
+      );
+    }
+  }
+
+  Future<void> _sendImmediateTest(BuildContext context) async {
+    try {
+      final service = getIt<NotificationService>();
+      final granted = await service.requestPermissions();
+      if (!granted) {
+        if (!mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Notifications permission not granted.')),
+        );
+        return;
+      }
+      await service.showImmediateTestNotification();
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Immediate test sent.')),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Immediate test failed: $error')),
+      );
+    }
+  }
+
+  Future<void> _openAppSettings(BuildContext context) async {
+    final opened = await openAppSettings();
+    if (!mounted) {
+      return;
+    }
+    if (!opened) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open app settings.')),
+      );
+    }
+  }
+
+  Future<void> _requestExactAlarmsPermission(BuildContext context) async {
+    final service = getIt<NotificationService>();
+    final granted = await service.requestExactAlarmsPermission();
+    if (!mounted) {
+      return;
+    }
+    if (granted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Exact alarms permission granted.')),
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Exact alarms permission not granted.'),
+      ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final spacing = Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
@@ -144,13 +287,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                     subtitle: 'Manage reminder schedule.',
                                     value: _wateringReminders,
                                     isLoading: _isLoading,
-                                    onChanged: (value) async {
-                                      setState(() {
-                                        _wateringReminders = value;
-                                      });
-                                      await AppSettings
-                                          .setWateringRemindersEnabled(value);
-                                    },
+                                    onChanged: _updateWateringReminders,
                                   ),
                                   SettingsSwitchTile(
                                     title: 'Daily summary',
@@ -165,6 +302,39 @@ class _SettingsPageState extends State<SettingsPage> {
                                           .setDailySummaryEnabled(value);
                                     },
                                   ),
+                                  if (_showDebugNotifications)
+                                    SettingsTile(
+                                      title: 'Send scheduled test notification',
+                                      subtitle: 'Schedules a notification in 10s.',
+                                      onTap: _isLoading
+                                          ? null
+                                          : () => _sendTestNotification(context),
+                                    ),
+                                  if (_showDebugNotifications)
+                                    SettingsTile(
+                                      title: 'Send immediate test notification',
+                                      subtitle: 'Fires a notification right now.',
+                                      onTap: _isLoading
+                                          ? null
+                                          : () => _sendImmediateTest(context),
+                                    ),
+                                  if (_showDebugNotifications)
+                                    SettingsTile(
+                                      title: 'Open app settings',
+                                      subtitle: 'Enable Alarms & reminders permission.',
+                                      onTap: _isLoading
+                                          ? null
+                                          : () => _openAppSettings(context),
+                                    ),
+                                  if (_showDebugNotifications)
+                                    SettingsTile(
+                                      title: 'Request exact alarms permission',
+                                      subtitle: 'Ask Android for exact scheduling.',
+                                      onTap: _isLoading
+                                          ? null
+                                          : () =>
+                                              _requestExactAlarmsPermission(context),
+                                    ),
                                 ],
                               ),
                             ),
