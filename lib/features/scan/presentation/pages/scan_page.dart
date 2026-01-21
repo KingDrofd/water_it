@@ -2,7 +2,6 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:water_it/core/layout/app_layout.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
 import 'package:water_it/core/widgets/buttons/app_primary_button.dart';
 import 'package:water_it/features/plants/presentation/pages/plant_form_page.dart';
@@ -69,18 +68,14 @@ class _ScanPageState extends State<ScanPage> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final width = constraints.maxWidth;
-
         return ListView(
           padding: EdgeInsets.only(
             left: spacing.lg,
             right: spacing.lg,
-            bottom: AppLayout.navBarInset(width, spacing: spacing.xxl),
+            top: spacing.lg,
+            bottom: spacing.xxl,
           ),
           children: [
-            SizedBox(height: AppLayout.navBarInset(width, spacing: spacing.xxl + spacing.xxl)),
-            
-            
             Text(
               'Take a clear photo of the plant to identify it later.',
               style: textTheme.bodySmall,

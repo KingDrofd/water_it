@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:water_it/core/layout/app_layout.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
 import 'package:water_it/features/app_shell/presentation/pages/quick_action_info_page.dart';
 
@@ -18,10 +17,7 @@ class ProfilePage extends StatelessWidget {
           slivers: [
             SliverToBoxAdapter(
               child: SizedBox(
-                height: AppLayout.navBarInset(
-                  width,
-                  spacing: spacing.xxl + spacing.xxl,
-                ),
+                height: spacing.lg,
               ),
             ),
             SliverPadding(
@@ -79,10 +75,7 @@ class ProfilePage extends StatelessWidget {
             ),
             SliverToBoxAdapter(
               child: SizedBox(
-                height: AppLayout.navBarInset(
-                  width,
-                  spacing: spacing.xxl,
-                ),
+                height: spacing.xxl,
               ),
             ),
           ],
