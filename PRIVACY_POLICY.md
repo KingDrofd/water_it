@@ -52,4 +52,4 @@ If we update this privacy policy, the revised version will be posted here with a
 
 ## Contact
 
-If you have questions about this privacy policy, contact us at: fromgamescontact@gmail.com
+If you have questions about this privacy policy, contact us at: fromgames.dev@gmail.com
