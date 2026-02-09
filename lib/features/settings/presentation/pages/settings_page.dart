@@ -373,14 +373,19 @@ class _SettingsPageState extends State<SettingsPage> {
                               key: _sectionKeys[SettingsSection.about],
                               child: SettingsSectionCard(
                                 title: 'About',
-                                children: const [
-                                  SettingsTile(
+                                children: [
+                                  const SettingsTile(
                                     title: 'App version',
                                     subtitle: 'Build 0.1.0',
                                   ),
                                   SettingsTile(
                                     title: 'Licenses',
                                     subtitle: 'View open source attributions.',
+                                    onTap: () => showLicensePage(
+                                      context: context,
+                                      applicationName: 'Water It',
+                                      applicationVersion: '0.1.0',
+                                    ),
                                   ),
                                 ],
                               ),

@@ -11,14 +11,12 @@ import 'package:water_it/core/widgets/app_bars/custom_app_bar.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
 import 'package:water_it/core/widgets/nav_bars/custom_nav_bar.dart';
 import 'package:water_it/core/widgets/nav_bars/nav_item.dart';
-import 'package:water_it/features/app_shell/presentation/pages/quick_action_info_page.dart';
 import 'package:water_it/features/settings/presentation/pages/settings_page.dart';
 import 'package:water_it/features/app_shell/presentation/widgets/quick_actions_drawer.dart';
 import 'package:water_it/features/home/presentation/pages/home_page.dart';
 import 'package:water_it/features/plants/presentation/pages/plants_page.dart';
 import 'package:water_it/features/plants/presentation/pages/plant_form_page.dart';
 import 'package:water_it/features/plants/presentation/bloc/plant_list_cubit.dart';
-import 'package:water_it/features/profile/presentation/pages/profile_page.dart';
 import 'package:water_it/features/scan/presentation/pages/scan_page.dart';
 import 'package:water_it/features/home/presentation/utils/home_location_controller.dart';
 import 'package:water_it/features/feedback/presentation/pages/feedback_page.dart';
@@ -33,26 +31,24 @@ class AppShellPage extends StatefulWidget {
 class _AppShellPageState extends State<AppShellPage> {
   int _selectedIndex = 0;
   bool _showBars = true;
+  final PageController _pageController = PageController();
 
-  late final List<Widget> _pages = const [
+  final List<Widget> _pages = const [
     HomePage(),
     PlantsPage(),
     ScanPage(),
-    ProfilePage(),
   ];
 
   late final List<NavItem> _navItems = const [
     NavItem(label: 'Home', icon: Icon(Icons.home_outlined)),
     NavItem(label: 'Plants', icon: Icon(Icons.local_florist_outlined)),
-    NavItem(label: 'Scan', icon: Icon(Icons.camera_alt_outlined)),
-    NavItem(label: 'Profile', icon: Icon(Icons.person_outline)),
+    NavItem(label: 'Add Plant', icon: Icon(Icons.camera_alt_outlined)),
   ];
 
   final List<String> _titles = const [
     'Home',
     'Plants',
-    'Scan',
-    'Profile',
+    'Add Plant',
   ];
 
   @override
@@ -64,13 +60,24 @@ class _AppShellPageState extends State<AppShellPage> {
     });
   }
 
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
   void _setIndex(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+    );
   }
 
   void _handleScroll(UserScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) {
+      return;
+    }
     final direction = notification.direction;
     if (direction == ScrollDirection.reverse && _showBars) {
       setState(() {
@@ -124,8 +131,13 @@ class _AppShellPageState extends State<AppShellPage> {
                           }
                           return false;
                         },
-                        child: IndexedStack(
-                          index: _selectedIndex,
+                        child: PageView(
+                          controller: _pageController,
+                          onPageChanged: (index) {
+                            setState(() {
+                              _selectedIndex = index;
+                            });
+                          },
                           children: _pages,
                         ),
                       ),
@@ -204,27 +216,11 @@ class _AppShellPageState extends State<AppShellPage> {
     }
 
     switch (action) {
-      case QuickAction.myPlants:
-        _setIndex(1);
+      case QuickAction.about:
+        _openAbout();
         return;
       case QuickAction.settings:
         _openSettings();
-        return;
-      case QuickAction.backupRestore:
-        _openQuickActionInfo(
-          title: 'Backup & Restore',
-          description:
-              'Save your plant data and bring it back on a new device.',
-          icon: Icons.backup,
-        );
-        return;
-      case QuickAction.about:
-        _openQuickActionInfo(
-          title: 'About',
-          description:
-              'Learn more about Water It and the ideas behind the app.',
-          icon: Icons.info_outline,
-        );
         return;
       case QuickAction.feedback:
         _openFeedback();
@@ -232,21 +228,15 @@ class _AppShellPageState extends State<AppShellPage> {
     }
   }
 
-  void _openQuickActionInfo({
-    required String title,
-    required String description,
-    required IconData icon,
-  }) {
+  void _openAbout() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
       }
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => QuickActionInfoPage(
-            title: title,
-            description: description,
-            icon: icon,
+          builder: (_) => const SettingsPage(
+            initialSection: SettingsSection.about,
           ),
         ),
       );

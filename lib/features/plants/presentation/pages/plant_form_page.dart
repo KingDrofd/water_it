@@ -15,10 +15,10 @@ import 'package:water_it/features/plants/presentation/utils/plant_form_handlers.
 class PlantFormPage extends StatefulWidget {
   const PlantFormPage({
     super.key,
-    this.initialImagePath,
+    this.initialImagePaths = const [],
   });
 
-  final String? initialImagePath;
+  final List<String> initialImagePaths;
 
   @override
   State<PlantFormPage> createState() => _PlantFormPageState();
@@ -54,10 +54,7 @@ class _PlantFormPageState extends State<PlantFormPage> {
     _originController = TextEditingController();
     _ageController = TextEditingController();
     _reminders.add(ReminderDraft.empty());
-    if (widget.initialImagePath != null &&
-        widget.initialImagePath!.isNotEmpty) {
-      _imagePaths.add(widget.initialImagePath!);
-    }
+    _imagePaths.addAll(widget.initialImagePaths);
   }
 
   @override

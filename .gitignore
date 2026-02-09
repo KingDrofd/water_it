@@ -45,6 +45,23 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
+# Signing secrets
+android/key.properties
+*.jks
+*.keystore
+android/play-store-credentials.json
+
+# Build automation (system-specific, not project-specific)
+android/fastlane/
+Gemfile
+Gemfile.lock
+
+# Generated assets
+IconKitchen-Output/
+
+# AI assistant configs
+CLAUDE.md
+.claude/
 # Android Studio will place build artifacts here
 /android/app/debug
 /android/app/profile

@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 enum QuickAction {
   settings,
-  myPlants,
-  backupRestore,
   about,
   feedback,
 }
@@ -33,16 +31,6 @@ class QuickActionsDrawer extends StatelessWidget {
                 icon: Icons.settings_outlined,
                 label: 'Settings',
                 onTap: () => onActionSelected(QuickAction.settings),
-              ),
-              _QuickActionTile(
-                icon: Icons.local_florist_outlined,
-                label: 'My Plants',
-                onTap: () => onActionSelected(QuickAction.myPlants),
-              ),
-              _QuickActionTile(
-                icon: Icons.backup,
-                label: 'Backup & Restore',
-                onTap: () => onActionSelected(QuickAction.backupRestore),
               ),
               _QuickActionTile(
                 icon: Icons.info_outline,
