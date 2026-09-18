@@ -67,10 +67,14 @@ CLAUDE.md
 /android/app/profile
 /android/app/release
 
-# Local-only docs
-docs/
+# Local-only docs (screenshots stay tracked for the README)
+docs/*
+!docs/screenshots/
+docs/screenshots/*.mp4
 
 # Local vendor experiments
 third_party/
-assets/Water It images/screen-20260208-184421.mp4
 android/build/reports/problems/problems-report.html
+
+# Build-time secrets (OpenWeather key). Example file is committed.
+dart_defines.json

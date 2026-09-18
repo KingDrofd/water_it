@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Water It** — Last updated: February 8, 2026
+**Water It** — Last updated: August 4, 2026
 
 ## What the app does
 
@@ -41,6 +41,14 @@ No other third-party services receive any data from the app.
 ## Data storage and security
 
 All app data is stored locally on your device using an SQLite database and shared preferences. We do not operate any servers or cloud storage. Uninstalling the app deletes all associated data.
+
+### Android Auto Backup
+
+Your plant database and app settings are included in Android's automatic device backup, which is stored in **your own Google account** (subject to your device's backup settings). This lets your data restore automatically when you reinstall the app or move to a new phone. Plant photos are excluded from automatic backup because of their size. We never see or have access to this backup — it rides Android's standard backup mechanism between your device and your Google account. You can disable it in your device's backup settings.
+
+### Manual export
+
+Settings → "Export data" creates a zip file containing your plants, rooms, care history, settings, and photos. The file is saved wherever you choose; it is not sent anywhere by the app. "Import data" restores such a file, replacing the app's current data.
 
 ## Children's privacy
 

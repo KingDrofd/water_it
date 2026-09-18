@@ -9,10 +9,10 @@ Your personal plant companion app — track your houseplants, get watering remin
 ## Screenshots
 
 <p align="center">
-  <img src="assets/Water It images/Screenshot_20260208-183935.png" alt="Home" width="200" />
-  <img src="assets/Water It images/Screenshot_20260208-183949.png" alt="Plants" width="200" />
-  <img src="assets/Water It images/Screenshot_20260208-184031.png" alt="Add Plant" width="200" />
-  <img src="assets/Water It images/Screenshot_20260208-184128.png" alt="Plant Detail" width="200" />
+  <img src="docs/screenshots/Screenshot_20260208-183935.png" alt="Home" width="200" />
+  <img src="docs/screenshots/Screenshot_20260208-183949.png" alt="Plants" width="200" />
+  <img src="docs/screenshots/Screenshot_20260208-184031.png" alt="Add Plant" width="200" />
+  <img src="docs/screenshots/Screenshot_20260208-184128.png" alt="Plant Detail" width="200" />
 </p>
 
 ## Features
@@ -55,7 +55,21 @@ features/
 
 ## Environment Variables
 
-The weather feature requires an [OpenWeather](https://openweathermap.org/) API key. Pass it at build time with `--dart-define`:
+The weather feature requires an [OpenWeather](https://openweathermap.org/) API key.
+
+**Preferred: keep it in `dart_defines.json`** (gitignored). Copy the template and fill in your key:
+
+```bash
+cp dart_defines.example.json dart_defines.json
+# edit dart_defines.json, then build/run with:
+flutter run   --dart-define-from-file=dart_defines.json
+flutter build apk      --release --dart-define-from-file=dart_defines.json
+flutter build appbundle --release --dart-define-from-file=dart_defines.json
+```
+
+Using the file means release builds can't silently ship without the key.
+
+Alternatively pass it inline with `--dart-define`:
 
 ```bash
 flutter run --dart-define=OPENWEATHER_API_KEY=your_key_here
