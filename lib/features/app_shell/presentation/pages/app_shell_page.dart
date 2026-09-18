@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:water_it/core/di/service_locator.dart';
 import 'package:water_it/core/layout/app_layout.dart';
 import 'package:water_it/core/notifications/notification_service.dart';
+import 'package:water_it/core/notifications/reminder_permission_flow.dart';
 import 'package:water_it/core/settings/app_settings.dart';
 import 'package:water_it/core/widgets/app_bars/app_bar_elements.dart';
 import 'package:water_it/core/widgets/app_bars/app_bar_icon_button.dart';
@@ -17,7 +18,7 @@ import 'package:water_it/features/home/presentation/pages/home_page.dart';
 import 'package:water_it/features/plants/presentation/pages/plants_page.dart';
 import 'package:water_it/features/plants/presentation/pages/plant_form_page.dart';
 import 'package:water_it/features/plants/presentation/bloc/plant_list_cubit.dart';
-import 'package:water_it/features/scan/presentation/pages/scan_page.dart';
+import 'package:water_it/features/add_plant/presentation/pages/add_plant_page.dart';
 import 'package:water_it/features/home/presentation/utils/home_location_controller.dart';
 import 'package:water_it/features/feedback/presentation/pages/feedback_page.dart';
 
@@ -28,7 +29,8 @@ class AppShellPage extends StatefulWidget {
   State<AppShellPage> createState() => _AppShellPageState();
 }
 
-class _AppShellPageState extends State<AppShellPage> {
+class _AppShellPageState extends State<AppShellPage>
+    with WidgetsBindingObserver {
   int _selectedIndex = 0;
   bool _showBars = true;
   final PageController _pageController = PageController();
@@ -36,7 +38,7 @@ class _AppShellPageState extends State<AppShellPage> {
   final List<Widget> _pages = const [
     HomePage(),
     PlantsPage(),
-    ScanPage(),
+    AddPlantPage(),
   ];
 
   late final List<NavItem> _navItems = const [
@@ -54,6 +56,7 @@ class _AppShellPageState extends State<AppShellPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _requestNotificationPermission();
       _requestWeatherLocation();
@@ -62,8 +65,18 @@ class _AppShellPageState extends State<AppShellPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pageController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // The user may have just granted "Alarms & reminders" in system
+      // settings; pick that up and rebuild the schedule.
+      ReminderPermissionFlow.refreshAfterResume();
+    }
   }
 
   void _setIndex(int index) {
@@ -165,24 +178,23 @@ class _AppShellPageState extends State<AppShellPage> {
                                     Theme.of(context).textTheme.displaySmall,
                               ),
                             ),
-                            action: AppBarIconButton(
-                              icon: _selectedIndex == 1
-                                  ? Icons.add
-                                  : Icons.notifications_none,
-                              onTap: () {
-                                if (_selectedIndex == 1) {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => const PlantFormPage(),
-                                    ),
-                                  ).then((_) {
-                                    context
-                                        .read<PlantListCubit>()
-                                        .loadPlants();
-                                  });
-                                }
-                              },
-                            ),
+                            action: _selectedIndex == 1
+                                ? AppBarIconButton(
+                                    icon: Icons.add,
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              const PlantFormPage(),
+                                        ),
+                                      ).then((_) {
+                                        context
+                                            .read<PlantListCubit>()
+                                            .loadPlants();
+                                      });
+                                    },
+                                  )
+                                : null,
                           ),
                         );
                       },
@@ -293,7 +305,14 @@ class _AppShellPageState extends State<AppShellPage> {
     final granted = await service.requestPermissions();
     if (!granted) {
       await AppSettings.setWateringRemindersEnabled(false);
+      return;
     }
+    // Notifications alone only get them delivered - precise timing is a
+    // second, separate Android grant.
+    if (!mounted) {
+      return;
+    }
+    await ReminderPermissionFlow.requestExactAlarms(context);
   }
 
   Future<void> _requestWeatherLocation() async {
@@ -301,7 +320,7 @@ class _AppShellPageState extends State<AppShellPage> {
       return;
     }
     final controller = HomeLocationController(
-      loadWeather: (_, __) async {},
+      loadWeather: (_, _) async {},
       setState: (_) {},
       showError: (_) {},
     );
@@ -327,7 +346,7 @@ class _AppShellPageState extends State<AppShellPage> {
       return;
     }
     final promptController = HomeLocationController(
-      loadWeather: (_, __) async {},
+      loadWeather: (_, _) async {},
       setState: (_) {},
       showError: (_) {},
     );

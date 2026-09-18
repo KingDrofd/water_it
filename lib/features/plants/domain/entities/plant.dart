@@ -1,3 +1,5 @@
+import 'package:water_it/features/plants/domain/entities/care_profile.dart';
+
 class Plant {
   const Plant({
     required this.id,
@@ -8,7 +10,9 @@ class Plant {
     this.soilType,
     this.preferredLighting,
     this.wateringLevel,
+    this.careNotes,
     this.scientificName,
+    this.roomId,
     this.imagePaths = const [],
     this.useRandomImage = false,
     this.reminders = const [],
@@ -19,10 +23,12 @@ class Plant {
   final int? ageMonths;
   final String? description;
   final String? origin;
-  final String? soilType;
-  final String? preferredLighting;
-  final String? wateringLevel;
+  final SoilKind? soilType;
+  final LightingLevel? preferredLighting;
+  final WateringLevel? wateringLevel;
+  final String? careNotes;
   final String? scientificName;
+  final String? roomId;
   final List<String> imagePaths;
   final bool useRandomImage;
   final List<WateringReminder> reminders;
@@ -33,10 +39,12 @@ class Plant {
     int? ageMonths,
     String? description,
     String? origin,
-    String? soilType,
-    String? preferredLighting,
-    String? wateringLevel,
+    SoilKind? soilType,
+    LightingLevel? preferredLighting,
+    WateringLevel? wateringLevel,
+    String? careNotes,
     String? scientificName,
+    String? roomId,
     List<String>? imagePaths,
     bool? useRandomImage,
     List<WateringReminder>? reminders,
@@ -50,7 +58,9 @@ class Plant {
       soilType: soilType ?? this.soilType,
       preferredLighting: preferredLighting ?? this.preferredLighting,
       wateringLevel: wateringLevel ?? this.wateringLevel,
+      careNotes: careNotes ?? this.careNotes,
       scientificName: scientificName ?? this.scientificName,
+      roomId: roomId ?? this.roomId,
       imagePaths: imagePaths ?? this.imagePaths,
       useRandomImage: useRandomImage ?? this.useRandomImage,
       reminders: reminders ?? this.reminders,
@@ -66,6 +76,7 @@ class WateringReminder {
     this.weekdays = const [],
     this.preferredTime,
     this.notes,
+    this.createdAt,
   });
 
   final String id;
@@ -74,4 +85,7 @@ class WateringReminder {
   final List<int> weekdays;
   final DateTime? preferredTime;
   final String? notes;
+
+  /// When this reminder was created; due moments before it are not overdue.
+  final DateTime? createdAt;
 }

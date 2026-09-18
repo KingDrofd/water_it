@@ -6,6 +6,7 @@ class HomeReminderItem {
   final DateTime dueAt;
   final IconData icon;
   final String plantId;
+  final bool isOverdue;
 
   const HomeReminderItem({
     required this.plantId,
@@ -13,5 +14,6 @@ class HomeReminderItem {
     required this.task,
     required this.dueAt,
     required this.icon,
+    this.isOverdue = false,
   });
 }

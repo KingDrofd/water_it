@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
 import 'package:water_it/features/plants/domain/entities/plant.dart';
+import 'package:water_it/features/plants/presentation/utils/care_field_labels.dart';
 import 'package:water_it/features/plants/presentation/utils/reminder_formatters.dart';
 
 class PlantDetailMessage extends StatelessWidget {
@@ -97,7 +98,7 @@ class PlantImageStrip extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: paths.length,
-        separatorBuilder: (_, __) => SizedBox(width: spacing.sm),
+        separatorBuilder: (_, _) => SizedBox(width: spacing.sm),
         itemBuilder: (context, index) {
           final path = paths[index];
           return ClipRRect(
@@ -227,14 +228,14 @@ class PlantDetailChips extends StatelessWidget {
       chips.add(PlantInfoChip(icon: icon, label: trimmed));
     }
 
-    addChip(Icons.wb_sunny_outlined, plant.preferredLighting);
+    addChip(Icons.wb_sunny_outlined, plant.preferredLighting?.label);
     addChip(
       Icons.opacity_outlined,
       plant.reminders.isNotEmpty
           ? formatReminderSubtitle(plant.reminders.first)
-          : plant.wateringLevel,
+          : plant.wateringLevel?.label,
     );
-    addChip(Icons.terrain_outlined, plant.soilType);
+    addChip(Icons.terrain_outlined, plant.soilType?.label);
 
     if (chips.isEmpty) {
       return Text(
@@ -251,68 +252,3 @@ class PlantDetailChips extends StatelessWidget {
   }
 }
 
-class PlantReminderSection extends StatelessWidget {
-  final List<WateringReminder> reminders;
-
-  const PlantReminderSection({
-    super.key,
-    required this.reminders,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (reminders.isEmpty) {
-      return Text(
-        'No reminders yet.',
-        style: Theme.of(context).textTheme.bodySmall,
-      );
-    }
-
-    return Column(
-      children: [
-        for (final reminder in reminders)
-          PlantReminderRow(
-            title: reminder.notes?.trim().isNotEmpty == true
-                ? reminder.notes!.trim()
-                : 'Reminder',
-            subtitle: formatReminderSubtitle(reminder),
-          ),
-      ],
-    );
-  }
-}
-
-class PlantReminderRow extends StatelessWidget {
-  final String title;
-  final String subtitle;
-
-  const PlantReminderRow({
-    super.key,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          const Icon(Icons.notifications_none, size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: textTheme.bodyMedium),
-                Text(subtitle, style: textTheme.bodySmall),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

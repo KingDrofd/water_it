@@ -2,16 +2,74 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:water_it/core/notifications/notification_action_handler.dart';
+import 'package:water_it/core/notifications/notification_channel.dart';
+import 'package:water_it/core/notifications/notification_payload.dart';
+import 'package:water_it/core/notifications/reminder_plan.dart';
 import 'package:water_it/core/settings/app_settings.dart';
-import 'package:water_it/features/plants/domain/entities/plant.dart';
+
+/// Invoked when the user taps a reminder body and the payload names a plant.
+typedef NotificationPlantTapHandler = void Function(String plantId);
+
+/// Everything that has to be true for a reminder to actually arrive on time.
+///
+/// Android splits this across two independent OS permissions, so "reminders
+/// are on" in the app says nothing about whether they will be delivered.
+class NotificationReadiness {
+  const NotificationReadiness({
+    required this.remindersEnabled,
+    required this.notificationsAllowed,
+    required this.exactAlarmsAllowed,
+    required this.batteryUnrestricted,
+  });
+
+  /// The in-app "Watering reminders" preference.
+  final bool remindersEnabled;
+
+  /// OS notification permission (POST_NOTIFICATIONS).
+  final bool notificationsAllowed;
+
+  /// OS "Alarms & reminders" access (SCHEDULE_EXACT_ALARM). Without it
+  /// Android may defer a reminder by hours while the device is dozing.
+  final bool exactAlarmsAllowed;
+
+  /// App is exempt from battery optimisation. Without the exemption, Doze and
+  /// Battery Saver can defer a reminder until the user next unlocks the phone
+  /// - this affects whether it arrives at all, not merely when.
+  final bool batteryUnrestricted;
+
+  /// Reminders are on, but the system will suppress them entirely.
+  bool get blocked => remindersEnabled && !notificationsAllowed;
+
+  /// Reminders may be delayed indefinitely or missed while the device sleeps.
+  bool get batteryRestricted =>
+      remindersEnabled && notificationsAllowed && !batteryUnrestricted;
+
+  /// Reminders are delivered, but their timing cannot be trusted.
+  bool get imprecise =>
+      remindersEnabled && notificationsAllowed && !exactAlarmsAllowed;
+
+  /// Something needs the user's attention for reminders to work properly.
+  bool get needsAttention => blocked || batteryRestricted || imprecise;
+}
 
 class NotificationService {
   NotificationService(this._plugin);
 
   final FlutterLocalNotificationsPlugin _plugin;
   bool _initialized = false;
+
+  static const String actionMarkDone = NotificationChannelSpec.actionMarkDone;
+  static const String actionSnooze = NotificationChannelSpec.actionSnooze;
+
+  /// Set by the app shell to open a plant's detail page on tap.
+  static NotificationPlantTapHandler? onPlantTap;
+
+  /// Set by the app shell to refresh UI state after an in-app "Mark done".
+  static Future<void> Function()? onActionHandled;
 
   Future<void> initialize() async {
     if (_initialized) {
@@ -36,8 +94,31 @@ class NotificationService {
       iOS: iosSettings,
     );
 
-    await _plugin.initialize(initSettings);
+    await _plugin.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: handleForegroundResponse,
+      onDidReceiveBackgroundNotificationResponse:
+          notificationActionBackground,
+    );
+    await NotificationChannelSpec.deleteLegacyChannels(_plugin);
     _initialized = true;
+  }
+
+  /// Handles taps and action presses while the app process is alive.
+  @visibleForTesting
+  static Future<void> handleForegroundResponse(
+    NotificationResponse response,
+  ) async {
+    if (response.actionId == actionMarkDone ||
+        response.actionId == actionSnooze) {
+      await NotificationActionHandler.handle(response);
+      await onActionHandled?.call();
+      return;
+    }
+    final payload = NotificationPayload.decode(response.payload);
+    if (payload != null && payload.plantId.isNotEmpty) {
+      onPlantTap?.call(payload.plantId);
+    }
   }
 
   Future<bool> requestPermissions() async {
@@ -71,64 +152,79 @@ class NotificationService {
     return await android.requestExactAlarmsPermission() ?? false;
   }
 
+  /// Whether the OS currently lets the app post notifications at all.
+  Future<bool> areNotificationsAllowed() async {
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android == null) {
+      return true;
+    }
+    return await android.areNotificationsEnabled() ?? true;
+  }
+
+  /// Whether the app is exempt from battery optimisation.
+  Future<bool> isBatteryUnrestricted() async {
+    try {
+      return await Permission.ignoreBatteryOptimizations.isGranted;
+    } catch (_) {
+      // Unsupported platform - don't claim a problem we can't verify.
+      return true;
+    }
+  }
+
+  /// Shows Android's own battery-exemption dialog. Callers must explain why
+  /// first: Play requires this to be a deliberate, informed user action.
+  Future<bool> requestBatteryExemption() async {
+    try {
+      final status = await Permission.ignoreBatteryOptimizations.request();
+      return status.isGranted;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Current delivery readiness, combining the app preference with every OS
+  /// restriction that can stop a reminder reaching the user.
+  Future<NotificationReadiness> readiness() async {
+    await initialize();
+    return NotificationReadiness(
+      remindersEnabled: await AppSettings.getWateringRemindersEnabled(),
+      notificationsAllowed: await areNotificationsAllowed(),
+      exactAlarmsAllowed: await canScheduleExactAlarms(),
+      batteryUnrestricted: await isBatteryUnrestricted(),
+    );
+  }
+
   Future<void> cancelAll() async {
     await _plugin.cancelAll();
   }
 
-  Future<void> scheduleWateringReminders(List<Plant> plants) async {
+  /// Replaces the entire system schedule with [plans]. The scheduler owns
+  /// what to schedule; this just puts it on the system.
+  Future<void> applySchedule(List<ReminderPlan> plans) async {
     await initialize();
-    final enabled = await AppSettings.getWateringRemindersEnabled();
-    if (!enabled) {
-      await cancelAll();
-      return;
-    }
-
     await cancelAll();
-    final now = DateTime.now();
 
-    for (final plant in plants) {
-      for (final reminder in plant.reminders) {
-        if (reminder.weekdays.isEmpty) {
-          continue;
-        }
-
-        final preferred = reminder.preferredTime ??
-            DateTime(now.year, now.month, now.day, 9);
-        final hour = preferred.hour;
-        final minute = preferred.minute;
-
-        for (final weekday in reminder.weekdays) {
-          final scheduled = _nextWeekdayOccurrence(
-            now,
-            weekday: weekday,
-            hour: hour,
-            minute: minute,
-          );
-          final id = _notificationId(
-            plantId: plant.id,
-            reminderId: reminder.id,
-            weekday: weekday,
-          );
-
-          if (kDebugMode) {
-            debugPrint(
-              'Schedule reminder: plant=${plant.id} reminder=${reminder.id} '
-              'weekday=$weekday local=$scheduled tz=${tz.local.name}',
-            );
-          }
-
-          await _scheduleWithFallback(
-            id: id,
-            title: 'Water ${plant.name}',
-            body: reminder.notes ?? 'Time to water your plant.',
-            scheduled: scheduled,
-            matchComponents: DateTimeComponents.dayOfWeekAndTime,
-          );
-        }
+    for (final plan in plans) {
+      final isSummary =
+          plan.payload.type == NotificationPayload.summaryType;
+      if (kDebugMode) {
+        debugPrint(
+          'Schedule: id=${plan.id} "${plan.title}" at=${plan.scheduledAt} '
+          'weekly=${plan.repeatsWeekly} tz=${tz.local.name}',
+        );
       }
+      await _scheduleWithFallback(
+        id: plan.id,
+        title: plan.title,
+        body: plan.body,
+        scheduled: plan.scheduledAt,
+        matchComponents:
+            plan.repeatsWeekly ? DateTimeComponents.dayOfWeekAndTime : null,
+        payload: plan.payload.encode(),
+        withActions: !isSummary,
+      );
     }
-
-    await AppSettings.setLastNotificationSchedule(DateTime.now());
   }
 
   Future<bool> showTestNotification({
@@ -142,18 +238,14 @@ class NotificationService {
       );
     }
 
-    try {
-      final exact = await _scheduleWithFallback(
-        id: 1,
-        title: 'Water It',
-        body: 'Test notification',
-        scheduled: scheduled,
-      );
-      await AppSettings.setLastNotificationTest(DateTime.now());
-      return exact;
-    } on PlatformException catch (error) {
-      rethrow;
-    }
+    final exact = await _scheduleWithFallback(
+      id: 1,
+      title: 'Water It',
+      body: 'Test notification',
+      scheduled: scheduled,
+    );
+    await AppSettings.setLastNotificationTest(DateTime.now());
+    return exact;
   }
 
   Future<void> showImmediateTestNotification() async {
@@ -162,7 +254,7 @@ class NotificationService {
       2,
       'Water It',
       'Immediate test notification',
-      _details(),
+      details(),
     );
     await AppSettings.setLastNotificationTest(DateTime.now());
   }
@@ -172,6 +264,12 @@ class NotificationService {
     return pending.length;
   }
 
+  /// Whether (and how) a notification launched the app from a dead state.
+  Future<NotificationAppLaunchDetails?> getLaunchDetails() async {
+    await initialize();
+    return _plugin.getNotificationAppLaunchDetails();
+  }
+
   Future<void> _schedule({
     required int id,
     required String title,
@@ -179,41 +277,25 @@ class NotificationService {
     required DateTime scheduled,
     required AndroidScheduleMode mode,
     DateTimeComponents? matchComponents,
+    String? payload,
+    bool withActions = false,
   }) {
     return _plugin.zonedSchedule(
       id,
       title,
       body,
       tz.TZDateTime.from(scheduled, tz.local),
-      _details(),
-      androidAllowWhileIdle: true,
+      details(withActions: withActions),
       androidScheduleMode: mode,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: matchComponents,
+      payload: payload,
     );
   }
 
-  NotificationDetails _details() {
-    const android = AndroidNotificationDetails(
-      'watering_reminders',
-      'Watering reminders',
-      channelDescription: 'Notifications for plant watering reminders.',
-      importance: Importance.defaultImportance,
-      priority: Priority.defaultPriority,
-    );
-    const ios = DarwinNotificationDetails();
-    return const NotificationDetails(android: android, iOS: ios);
-  }
-
-  int _notificationId({
-    required String plantId,
-    required String reminderId,
-    required int weekday,
-  }) {
-    final key = '$plantId-$reminderId-$weekday';
-    return key.hashCode & 0x7fffffff;
-  }
+  static NotificationDetails details({bool withActions = false}) =>
+      NotificationChannelSpec.details(withActions: withActions);
 
   Future<bool> _scheduleWithFallback({
     required int id,
@@ -221,6 +303,8 @@ class NotificationService {
     required String body,
     required DateTime scheduled,
     DateTimeComponents? matchComponents,
+    String? payload,
+    bool withActions = false,
     AndroidScheduleMode fallbackMode = AndroidScheduleMode.inexactAllowWhileIdle,
   }) async {
     final exactAllowed = await canScheduleExactAlarms();
@@ -232,6 +316,8 @@ class NotificationService {
         scheduled: scheduled,
         mode: fallbackMode,
         matchComponents: matchComponents,
+        payload: payload,
+        withActions: withActions,
       );
       return false;
     }
@@ -244,6 +330,8 @@ class NotificationService {
         scheduled: scheduled,
         mode: AndroidScheduleMode.exactAllowWhileIdle,
         matchComponents: matchComponents,
+        payload: payload,
+        withActions: withActions,
       );
       return true;
     } on PlatformException catch (error) {
@@ -260,23 +348,10 @@ class NotificationService {
         scheduled: scheduled,
         mode: fallbackMode,
         matchComponents: matchComponents,
+        payload: payload,
+        withActions: withActions,
       );
       return false;
     }
-  }
-
-  DateTime _nextWeekdayOccurrence(
-    DateTime now, {
-    required int weekday,
-    required int hour,
-    required int minute,
-  }) {
-    final today = DateTime(now.year, now.month, now.day, hour, minute);
-    var daysAhead = (weekday - now.weekday) % 7;
-    var scheduled = today.add(Duration(days: daysAhead));
-    if (!scheduled.isAfter(now)) {
-      scheduled = scheduled.add(const Duration(days: 7));
-    }
-    return scheduled;
   }
 }

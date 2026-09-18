@@ -6,8 +6,6 @@ class AppColors {
   static const Color surfaceVariant = Color(0xFFD9D9D9);
   static const Color outline = Color(0xFFD6D6D6);
   static const Color muted = Color(0xFF616161);
-  static const Color mutedAlt = Color(0xFF6D6D6D);
-  static const Color stone = Color(0xFFD6CBC7);
 
   static const Color primary = Color(0xFF8BC34A);
   static const Color primaryContainer = Color(0xFFAED581);

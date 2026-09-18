@@ -4,7 +4,10 @@ import 'package:uuid/uuid.dart';
 import 'package:water_it/core/di/service_locator.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
 import 'package:water_it/core/widgets/buttons/app_primary_button.dart';
+import 'package:water_it/features/plants/domain/entities/care_profile.dart';
 import 'package:water_it/features/plants/domain/entities/plant.dart';
+import 'package:water_it/features/plants/domain/entities/room.dart';
+import 'package:water_it/features/plants/domain/usecases/get_rooms.dart';
 import 'package:water_it/features/plants/presentation/bloc/plant_form_cubit.dart';
 import 'package:water_it/features/plants/presentation/bloc/plant_list_cubit.dart';
 import 'package:water_it/features/plants/presentation/widgets/plant_form_content.dart';
@@ -28,11 +31,14 @@ class _PlantFormPageState extends State<PlantFormPage> {
   late final TextEditingController _nameController;
   late final TextEditingController _scientificController;
   late final TextEditingController _descriptionController;
-  late final TextEditingController _lightingController;
-  late final TextEditingController _soilController;
-  late final TextEditingController _wateringController;
+  late final TextEditingController _careNotesController;
   late final TextEditingController _originController;
   late final TextEditingController _ageController;
+  LightingLevel? _lighting;
+  WateringLevel? _watering;
+  SoilKind? _soil;
+  String? _roomId;
+  List<Room> _rooms = const [];
   final List<ReminderDraft> _reminders = [];
   final List<String> _imagePaths = [];
   bool _useRandomImage = false;
@@ -48,13 +54,21 @@ class _PlantFormPageState extends State<PlantFormPage> {
     _nameController = TextEditingController();
     _scientificController = TextEditingController();
     _descriptionController = TextEditingController();
-    _lightingController = TextEditingController();
-    _soilController = TextEditingController();
-    _wateringController = TextEditingController();
+    _careNotesController = TextEditingController();
     _originController = TextEditingController();
     _ageController = TextEditingController();
     _reminders.add(ReminderDraft.empty());
     _imagePaths.addAll(widget.initialImagePaths);
+    _loadRooms();
+  }
+
+  Future<void> _loadRooms() async {
+    final rooms = await getIt<GetRooms>()();
+    if (mounted) {
+      setState(() {
+        _rooms = rooms;
+      });
+    }
   }
 
   @override
@@ -62,9 +76,7 @@ class _PlantFormPageState extends State<PlantFormPage> {
     _nameController.dispose();
     _scientificController.dispose();
     _descriptionController.dispose();
-    _lightingController.dispose();
-    _soilController.dispose();
-    _wateringController.dispose();
+    _careNotesController.dispose();
     _originController.dispose();
     _ageController.dispose();
     for (final reminder in _reminders) {
@@ -132,10 +144,20 @@ class _PlantFormPageState extends State<PlantFormPage> {
                       scientificController: _scientificController,
                       ageController: _ageController,
                       descriptionController: _descriptionController,
-                      lightingController: _lightingController,
-                      wateringController: _wateringController,
-                      soilController: _soilController,
+                      lighting: _lighting,
+                      onLightingChanged: (value) =>
+                          setState(() => _lighting = value),
+                      watering: _watering,
+                      onWateringChanged: (value) =>
+                          setState(() => _watering = value),
+                      soil: _soil,
+                      onSoilChanged: (value) => setState(() => _soil = value),
+                      careNotesController: _careNotesController,
                       originController: _originController,
+                      rooms: _rooms,
+                      roomId: _roomId,
+                      onRoomChanged: (value) =>
+                          setState(() => _roomId = value),
                       labelStyle: labelStyle,
                       reminderInputs: [
                         ReminderInputList(
@@ -206,10 +228,12 @@ class _PlantFormPageState extends State<PlantFormPage> {
       name: trimmedName,
       scientificName: _nullable(_scientificController),
       description: _nullable(_descriptionController),
-      preferredLighting: _nullable(_lightingController),
-      soilType: _nullable(_soilController),
-      wateringLevel: _nullable(_wateringController),
+      preferredLighting: _lighting,
+      soilType: _soil,
+      wateringLevel: _watering,
+      careNotes: _nullable(_careNotesController),
       origin: _nullable(_originController),
+      roomId: _roomId,
       ageMonths: ageMonths,
       imagePaths: List<String>.from(_imagePaths),
       useRandomImage: _useRandomImage,
@@ -285,6 +309,9 @@ class _PlantFormPageState extends State<PlantFormPage> {
           weekdays: reminder.weekdays.toList()..sort(),
           preferredTime: reminder.preferredTime,
           notes: notesText.isEmpty ? null : notesText,
+          // New reminders are stamped now so they don't inherit this week's
+          // earlier due moment as an instant "overdue".
+          createdAt: reminder.createdAt ?? DateTime.now(),
         ),
       );
     }

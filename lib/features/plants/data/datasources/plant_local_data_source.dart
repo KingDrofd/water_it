@@ -8,48 +8,29 @@ abstract class PlantLocalDataSource {
   Future<void> deletePlant(String id);
 }
 
+/// Persists plants against schema v4: watering reminders are stored as
+/// `care_tasks` rows with type 'water'. Rows of other task types are left
+/// untouched by this data source (they belong to the care system).
 class PlantLocalDataSourceImpl implements PlantLocalDataSource {
   PlantLocalDataSourceImpl(this.db);
 
   final Database db;
 
-  static const createPlantTable = '''
-CREATE TABLE IF NOT EXISTS plants(
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  age_months INTEGER,
-  description TEXT,
-  origin TEXT,
-  soil_type TEXT,
-  preferred_lighting TEXT,
-  watering_level TEXT,
-  scientific_name TEXT,
-  image_paths TEXT,
-  use_random_image INTEGER NOT NULL DEFAULT 0
-);
-''';
-
-  static const createReminderTable = '''
-CREATE TABLE IF NOT EXISTS watering_reminders(
-  id TEXT PRIMARY KEY,
-  plant_id TEXT NOT NULL,
-  frequency_days INTEGER NOT NULL,
-  weekdays TEXT,
-  preferred_time TEXT,
-  notes TEXT,
-  FOREIGN KEY(plant_id) REFERENCES plants(id) ON DELETE CASCADE
-);
-''';
+  static const String waterTaskType = 'water';
 
   @override
   Future<List<PlantModel>> getPlants() async {
     final plantRows = await db.query('plants');
-    final reminderRows = await db.query('watering_reminders');
+    final taskRows = await db.query(
+      'care_tasks',
+      where: 'type = ?',
+      whereArgs: [waterTaskType],
+    );
 
     return plantRows.map((plantRow) {
-      final reminders = reminderRows
+      final reminders = taskRows
           .where((r) => r['plant_id'] == plantRow['id'])
-          .map(WateringReminderModel.fromMap)
+          .map(WateringReminderModel.fromCareTaskMap)
           .toList();
       return PlantModel.fromMap(plantRow, reminders: reminders);
     }).toList();
@@ -61,14 +42,14 @@ CREATE TABLE IF NOT EXISTS watering_reminders(
         await db.query('plants', where: 'id = ?', whereArgs: [id], limit: 1);
     if (plantRows.isEmpty) return null;
 
-    final reminderRows = await db.query(
-      'watering_reminders',
-      where: 'plant_id = ?',
-      whereArgs: [id],
+    final taskRows = await db.query(
+      'care_tasks',
+      where: 'plant_id = ? AND type = ?',
+      whereArgs: [id, waterTaskType],
     );
 
     final reminders =
-        reminderRows.map(WateringReminderModel.fromMap).toList();
+        taskRows.map(WateringReminderModel.fromCareTaskMap).toList();
     return PlantModel.fromMap(plantRows.first, reminders: reminders);
   }
 
@@ -84,9 +65,9 @@ CREATE TABLE IF NOT EXISTS watering_reminders(
       );
 
       await txn.delete(
-        'watering_reminders',
-        where: 'plant_id = ?',
-        whereArgs: [plant.id],
+        'care_tasks',
+        where: 'plant_id = ? AND type = ?',
+        whereArgs: [plant.id, waterTaskType],
       );
 
       for (final reminder in plant.reminders) {
@@ -99,10 +80,11 @@ CREATE TABLE IF NOT EXISTS watering_reminders(
                 weekdays: reminder.weekdays,
                 preferredTime: reminder.preferredTime,
                 notes: reminder.notes,
+                createdAt: reminder.createdAt,
               );
         await txn.insert(
-          'watering_reminders',
-          reminderModel.toMap(),
+          'care_tasks',
+          reminderModel.toCareTaskMap(),
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
       }
@@ -113,7 +95,12 @@ CREATE TABLE IF NOT EXISTS watering_reminders(
   Future<void> deletePlant(String id) async {
     await db.transaction((txn) async {
       await txn.delete(
-        'watering_reminders',
+        'care_events',
+        where: 'plant_id = ?',
+        whereArgs: [id],
+      );
+      await txn.delete(
+        'care_tasks',
         where: 'plant_id = ?',
         whereArgs: [id],
       );

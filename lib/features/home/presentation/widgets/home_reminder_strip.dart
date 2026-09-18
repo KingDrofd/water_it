@@ -9,6 +9,7 @@ class HomeReminderStrip extends StatelessWidget {
   final ColorScheme colorScheme;
   final List<HomeReminderItem> items;
   final ValueChanged<HomeReminderItem>? onTapItem;
+  final ValueChanged<HomeReminderItem>? onMarkDone;
   final VoidCallback? onEmptyAction;
   final String? emptyActionLabel;
 
@@ -19,6 +20,7 @@ class HomeReminderStrip extends StatelessWidget {
     required this.colorScheme,
     required this.items,
     this.onTapItem,
+    this.onMarkDone,
     this.onEmptyAction,
     this.emptyActionLabel,
   });
@@ -70,6 +72,8 @@ class HomeReminderStrip extends StatelessWidget {
                     textTheme: textTheme,
                     colorScheme: colorScheme,
                     onTap: onTapItem == null ? null : () => onTapItem!(item),
+                    onMarkDone:
+                        onMarkDone == null ? null : () => onMarkDone!(item),
                   ),
                 ),
               ),
@@ -85,16 +89,20 @@ class _ReminderTile extends StatelessWidget {
   final TextTheme textTheme;
   final ColorScheme colorScheme;
   final VoidCallback? onTap;
+  final VoidCallback? onMarkDone;
 
   const _ReminderTile({
     required this.item,
     required this.textTheme,
     required this.colorScheme,
     this.onTap,
+    this.onMarkDone,
   });
 
   @override
   Widget build(BuildContext context) {
+    final accent = item.isOverdue ? colorScheme.error : colorScheme.primary;
+
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: onTap,
@@ -103,7 +111,7 @@ class _ReminderTile extends StatelessWidget {
         children: [
           Text(item.plantName, style: textTheme.labelLarge),
           const SizedBox(height: 8),
-          Icon(item.icon, color: colorScheme.primary, size: 36),
+          Icon(item.icon, color: accent, size: 36),
           const SizedBox(height: 8),
           Text(
             item.task,
@@ -112,9 +120,28 @@ class _ReminderTile extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            DateFormat('EEE h:mm a').format(item.dueAt),
-            style: textTheme.labelSmall,
+            item.isOverdue
+                ? 'Overdue - ${DateFormat('EEE').format(item.dueAt)}'
+                : DateFormat('EEE h:mm a').format(item.dueAt),
+            style: textTheme.labelSmall?.copyWith(
+              color: item.isOverdue ? colorScheme.error : null,
+            ),
           ),
+          if (onMarkDone != null) ...[
+            const SizedBox(height: 8),
+            InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: onMarkDone,
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.check, size: 18, color: accent),
+              ),
+            ),
+          ],
         ],
       ),
     );

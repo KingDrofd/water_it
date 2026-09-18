@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:water_it/core/app_info/app_info.dart';
 import 'package:water_it/core/layout/app_layout.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
 import 'package:water_it/core/widgets/app_bars/sliver_page_header.dart';
@@ -13,7 +14,7 @@ class FeedbackPage extends StatefulWidget {
 }
 
 class _FeedbackPageState extends State<FeedbackPage> {
-  static const String _supportEmail = 'support@waterit.app';
+  static const String _supportEmail = AppInfo.supportEmail;
 
   final TextEditingController _subjectController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();

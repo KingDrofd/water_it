@@ -1,19 +1,28 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:water_it/features/backup/data/backup_service.dart';
+import 'package:water_it/features/plants/presentation/bloc/plant_list_cubit.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:water_it/core/app_info/app_info.dart';
 import 'package:water_it/core/di/service_locator.dart';
 import 'package:water_it/core/notifications/notification_service.dart';
+import 'package:water_it/core/notifications/reminder_permission_flow.dart';
 import 'package:water_it/core/layout/app_layout.dart';
 import 'package:water_it/core/settings/app_settings.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
 import 'package:water_it/core/widgets/app_bars/sliver_page_header.dart';
 import 'package:water_it/features/home/presentation/utils/home_location_controller.dart';
 import 'package:water_it/features/settings/presentation/widgets/settings_sections.dart';
-import 'package:water_it/features/plants/domain/usecases/get_plants.dart';
+import 'package:water_it/features/plants/domain/services/reminder_scheduler.dart';
 
 enum SettingsSection {
   notifications,
   weather,
+  data,
   about,
 }
 
@@ -34,24 +43,31 @@ class SettingsPage extends StatefulWidget {
   State<SettingsPage> createState() => _SettingsPageState();
 }
 
-class _SettingsPageState extends State<SettingsPage> {
+class _SettingsPageState extends State<SettingsPage>
+    with WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
   late final Map<SettingsSection, GlobalKey> _sectionKeys = {
     SettingsSection.notifications: GlobalKey(),
     SettingsSection.weather: GlobalKey(),
+    SettingsSection.data: GlobalKey(),
     SettingsSection.about: GlobalKey(),
   };
+  bool _backupBusy = false;
+  NotificationReadiness? _readiness;
   bool _wateringReminders = true;
   bool _dailySummary = false;
   TemperatureUnit _temperatureUnit = TemperatureUnit.celsius;
   bool _isLoading = true;
   String _locationLabel = 'Set your location';
   String _locationNote = 'Tap to choose';
+  String _appVersion = '';
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadSettings();
+    _loadAppVersion();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final section = widget.initialSection;
       if (section != null) {
@@ -76,12 +92,93 @@ class _SettingsPageState extends State<SettingsPage> {
       _locationNote = location.note;
       _isLoading = false;
     });
+    await _loadReadiness();
+  }
+
+  Future<void> _loadAppVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _appVersion = '${info.version} (${info.buildNumber})';
+    });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Reflect a permission the user may have just toggled in system settings.
+      _loadReadiness();
+    }
+  }
+
+  Future<void> _loadReadiness() async {
+    try {
+      final readiness = await getIt<NotificationService>().readiness();
+      if (mounted) {
+        setState(() => _readiness = readiness);
+      }
+    } catch (_) {
+      // Status row simply stays on its last known value.
+    }
+  }
+
+  Future<void> _fixReminderDelivery() async {
+    final readiness = _readiness;
+    if (readiness == null) {
+      return;
+    }
+    if (readiness.blocked) {
+      await getIt<NotificationService>().requestPermissions();
+    } else if (readiness.batteryRestricted) {
+      await ReminderPermissionFlow.requestBatteryExemption(context);
+    } else {
+      await ReminderPermissionFlow.requestExactAlarms(context);
+    }
+    await _loadReadiness();
+  }
+
+  /// Plain-language summary of whether reminders will actually arrive, and
+  /// on time. Android's two grants are collapsed into one honest line.
+  String get _deliverySubtitle {
+    final readiness = _readiness;
+    if (readiness == null) {
+      return 'Checking...';
+    }
+    if (!readiness.remindersEnabled) {
+      return 'Turn on watering reminders to use this.';
+    }
+    if (readiness.blocked) {
+      return 'Blocked by Android - notifications are switched off. Tap to fix.';
+    }
+    if (readiness.batteryRestricted) {
+      return 'Battery saving may stop reminders arriving. Tap to allow them through.';
+    }
+    if (readiness.imprecise) {
+      return ReminderPermissionFlow.exactAlarmPromptsEnabled
+          ? 'Reminders may arrive hours late. Tap to allow precise timing.'
+          : 'Reminders arrive, but Android decides their exact timing.';
+    }
+    return 'Reminders arrive at the time you set.';
+  }
+
+  bool get _deliveryNeedsAttention {
+    final readiness = _readiness;
+    if (readiness == null) {
+      return false;
+    }
+    return readiness.blocked ||
+        readiness.batteryRestricted ||
+        (ReminderPermissionFlow.exactAlarmPromptsEnabled &&
+            readiness.imprecise);
   }
 
   void _scrollToSection(SettingsSection section) {
@@ -98,7 +195,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _selectLocation(BuildContext context) async {
     final controller = HomeLocationController(
-      loadWeather: (_, __) async {},
+      loadWeather: (_, _) async {},
       setState: (_) {},
       showError: (message) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -132,8 +229,10 @@ class _SettingsPageState extends State<SettingsPage> {
           }
           return;
         }
-        final plants = await getIt<GetPlants>()();
-        await service.scheduleWateringReminders(plants);
+        if (mounted) {
+          await ReminderPermissionFlow.requestExactAlarms(context);
+        }
+        await getIt<ReminderScheduler>().rescheduleAll();
       } else {
         await service.cancelAll();
       }
@@ -144,7 +243,7 @@ class _SettingsPageState extends State<SettingsPage> {
         );
       }
     }
-
+    await _loadReadiness();
   }
 
   Future<void> _sendTestNotification(BuildContext context) async {
@@ -249,6 +348,119 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
 
+  void _showMessage(String message) {
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _exportData() async {
+    setState(() => _backupBusy = true);
+    try {
+      final bytes = await getIt<BackupService>().exportArchive();
+      final now = DateTime.now();
+      final stamp = '${now.year}'
+          '${now.month.toString().padLeft(2, '0')}'
+          '${now.day.toString().padLeft(2, '0')}';
+      final path = await FilePicker.platform.saveFile(
+        dialogTitle: 'Save Water It backup',
+        fileName: 'water_it_backup_$stamp.zip',
+        type: FileType.custom,
+        allowedExtensions: ['zip'],
+        bytes: bytes,
+      );
+      if (path == null) {
+        return; // User cancelled.
+      }
+      // On desktop, saveFile only returns the location — write it ourselves.
+      if (!Platform.isAndroid && !Platform.isIOS) {
+        await File(path).writeAsBytes(bytes);
+      }
+      _showMessage('Backup exported.');
+    } catch (error) {
+      _showMessage('Export failed: $error');
+    } finally {
+      if (mounted) {
+        setState(() => _backupBusy = false);
+      }
+    }
+  }
+
+  Future<void> _importData() async {
+    setState(() => _backupBusy = true);
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        dialogTitle: 'Pick a Water It backup',
+        type: FileType.custom,
+        allowedExtensions: ['zip'],
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty) {
+        return; // User cancelled.
+      }
+      final file = result.files.first;
+      final bytes = file.bytes ??
+          (file.path != null ? await File(file.path!).readAsBytes() : null);
+      if (bytes == null) {
+        _showMessage('Could not read the selected file.');
+        return;
+      }
+
+      final summary = BackupService.readSummary(bytes);
+      if (summary == null) {
+        _showMessage('Not a Water It backup file.');
+        return;
+      }
+      if (!mounted) {
+        return;
+      }
+
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Replace all data?'),
+          content: Text(
+            'This backup contains ${summary.plantCount} plants, '
+            '${summary.roomCount} rooms, ${summary.careTaskCount} care tasks, '
+            '${summary.careEventCount} care events, and '
+            '${summary.imageCount} photos.\n\n'
+            'Importing replaces everything currently in the app.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Replace'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) {
+        return;
+      }
+
+      await getIt<BackupService>().importArchive(bytes);
+      await AppSettings.syncTemperatureUnit();
+      await getIt<PlantListCubit>().loadPlants();
+      await _loadSettings();
+      _showMessage('Backup imported.');
+    } on FormatException catch (error) {
+      _showMessage(error.message);
+    } catch (error) {
+      _showMessage('Import failed: $error');
+    } finally {
+      if (mounted) {
+        setState(() => _backupBusy = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final spacing = Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
@@ -304,7 +516,30 @@ class _SettingsPageState extends State<SettingsPage> {
                                       });
                                       await AppSettings
                                           .setDailySummaryEnabled(value);
+                                      try {
+                                        await getIt<ReminderScheduler>()
+                                            .rescheduleAll();
+                                      } catch (_) {
+                                        // Summary picks up on next reschedule.
+                                      }
                                     },
+                                  ),
+                                  SettingsTile(
+                                    title: _deliveryNeedsAttention
+                                        ? 'Reminder delivery - action needed'
+                                        : 'Reminder delivery',
+                                    subtitle: _deliverySubtitle,
+                                    onTap: _isLoading || !_deliveryNeedsAttention
+                                        ? null
+                                        : _fixReminderDelivery,
+                                  ),
+                                  SettingsTile(
+                                    title: 'Reminders not arriving?',
+                                    subtitle:
+                                        'Extra steps for Samsung, Xiaomi and other phone makers.',
+                                    onTap: () =>
+                                        ReminderPermissionFlow
+                                            .showManufacturerHelp(context),
                                   ),
                                   if (_enableNotificationDebug && kDebugMode)
                                     SettingsTile(
@@ -370,21 +605,48 @@ class _SettingsPageState extends State<SettingsPage> {
                             ),
                             SizedBox(height: spacing.sm),
                             KeyedSubtree(
+                              key: _sectionKeys[SettingsSection.data],
+                              child: SettingsSectionCard(
+                                title: 'Data',
+                                children: [
+                                  SettingsTile(
+                                    title: 'Export data',
+                                    subtitle:
+                                        'Save plants, photos, and care history as a zip file.',
+                                    onTap: _isLoading || _backupBusy
+                                        ? null
+                                        : _exportData,
+                                  ),
+                                  SettingsTile(
+                                    title: 'Import data',
+                                    subtitle:
+                                        'Restore from a backup zip. Replaces current data.',
+                                    onTap: _isLoading || _backupBusy
+                                        ? null
+                                        : _importData,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(height: spacing.sm),
+                            KeyedSubtree(
                               key: _sectionKeys[SettingsSection.about],
                               child: SettingsSectionCard(
                                 title: 'About',
                                 children: [
-                                  const SettingsTile(
+                                  SettingsTile(
                                     title: 'App version',
-                                    subtitle: 'Build 0.1.0',
+                                    subtitle: _appVersion.isEmpty
+                                        ? 'Loading...'
+                                        : _appVersion,
                                   ),
                                   SettingsTile(
                                     title: 'Licenses',
                                     subtitle: 'View open source attributions.',
                                     onTap: () => showLicensePage(
                                       context: context,
-                                      applicationName: 'Water It',
-                                      applicationVersion: '0.1.0',
+                                      applicationName: AppInfo.appName,
+                                      applicationVersion: _appVersion,
                                     ),
                                   ),
                                 ],

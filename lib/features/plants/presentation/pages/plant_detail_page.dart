@@ -3,10 +3,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:water_it/core/di/service_locator.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
 import 'package:water_it/core/widgets/app_bars/app_bar_icon_button.dart';
+import 'package:water_it/features/plants/domain/entities/care_task.dart';
 import 'package:water_it/features/plants/domain/entities/plant.dart';
+import 'package:water_it/features/plants/domain/entities/room.dart';
+import 'package:water_it/features/plants/domain/usecases/get_rooms.dart';
+import 'package:water_it/features/plants/presentation/utils/care_field_labels.dart';
+import 'package:water_it/features/plants/presentation/bloc/care_log_cubit.dart';
+import 'package:water_it/features/plants/presentation/bloc/care_task_cubit.dart';
 import 'package:water_it/features/plants/presentation/bloc/plant_detail_cubit.dart';
 import 'package:water_it/features/plants/presentation/bloc/plant_list_cubit.dart';
 import 'package:water_it/features/plants/presentation/pages/plant_edit_page.dart';
+import 'package:water_it/features/plants/presentation/widgets/care_history_widgets.dart';
+import 'package:water_it/features/plants/presentation/widgets/care_task_widgets.dart';
 import 'package:water_it/features/plants/presentation/widgets/plant_detail_widgets.dart';
 
 class PlantDetailPage extends StatelessWidget {
@@ -19,8 +27,18 @@ class PlantDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => PlantDetailCubit(getIt())..loadPlant(plantId),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => PlantDetailCubit(getIt())..loadPlant(plantId),
+        ),
+        BlocProvider(
+          create: (_) => CareLogCubit(getIt(), getIt())..load(plantId),
+        ),
+        BlocProvider(
+          create: (_) => getIt<CareTaskCubit>()..load(plantId),
+        ),
+      ],
       child: Scaffold(
         body: BlocBuilder<PlantDetailCubit, PlantDetailState>(
           builder: (context, state) {
@@ -60,6 +78,28 @@ class _DetailBody extends StatelessWidget {
     required this.plant,
     required this.plantId,
   });
+
+  Future<void> _editTask(BuildContext context, [CareTask? task]) async {
+    final taskCubit = context.read<CareTaskCubit>();
+    final detailCubit = context.read<PlantDetailCubit>();
+    final result = await showCareTaskEditor(
+      context,
+      plantId: plantId,
+      existing: task,
+    );
+    if (result == null) {
+      return;
+    }
+    if (result.deleted) {
+      await taskCubit.delete(result.task);
+    } else {
+      await taskCubit.save(result.task);
+    }
+    // Water tasks also surface as reminders on the detail chips, home strip,
+    // and library — refresh those views.
+    await detailCubit.loadPlant(plantId);
+    await getIt<PlantListCubit>().loadPlants();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -150,6 +190,26 @@ class _DetailBody extends StatelessWidget {
                         label: 'Scientific',
                         value: plant.scientificName ?? 'Unknown',
                       ),
+                      if (plant.roomId != null)
+                        FutureBuilder<List<Room>>(
+                          future: getIt<GetRooms>()(),
+                          builder: (context, snapshot) {
+                            final rooms = snapshot.data ?? const <Room>[];
+                            String roomName = 'Unassigned';
+                            for (final room in rooms) {
+                              if (room.id == plant.roomId) {
+                                roomName = room.isOutdoor
+                                    ? '${room.name} (outdoor)'
+                                    : room.name;
+                                break;
+                              }
+                            }
+                            return PlantKeyValueRow(
+                              label: 'Room',
+                              value: roomName,
+                            );
+                          },
+                        ),
                     ],
                   ),
                 ),
@@ -157,19 +217,27 @@ class _DetailBody extends StatelessWidget {
                 PlantSectionCard(
                   title: 'Care',
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       PlantKeyValueRow(
                         label: 'Light',
-                        value: plant.preferredLighting ?? 'Not set',
+                        value: plant.preferredLighting?.label ?? 'Not set',
                       ),
                       PlantKeyValueRow(
                         label: 'Water',
-                        value: plant.wateringLevel ?? 'Not set',
+                        value: plant.wateringLevel?.label ?? 'Not set',
                       ),
                       PlantKeyValueRow(
                         label: 'Soil',
-                        value: plant.soilType ?? 'Not set',
+                        value: plant.soilType?.label ?? 'Not set',
                       ),
+                      if (plant.careNotes?.trim().isNotEmpty == true) ...[
+                        SizedBox(height: spacing.xs),
+                        Text(
+                          plant.careNotes!.trim(),
+                          style: textTheme.bodySmall,
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -182,9 +250,36 @@ class _DetailBody extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: spacing.md),
-                PlantSectionCard(
-                  title: 'Reminders',
-                  child: PlantReminderSection(reminders: plant.reminders),
+                BlocBuilder<CareTaskCubit, CareTaskState>(
+                  builder: (context, taskState) {
+                    return PlantSectionCard(
+                      title: 'Care tasks',
+                      child: CareTaskSection(
+                        tasks: taskState.tasks,
+                        onAdd: () => _editTask(context),
+                        onTapTask: (task) => _editTask(context, task),
+                      ),
+                    );
+                  },
+                ),
+                SizedBox(height: spacing.md),
+                BlocBuilder<CareLogCubit, CareLogState>(
+                  builder: (context, careState) {
+                    return PlantSectionCard(
+                      title: 'Care history',
+                      child: CareHistorySection(
+                        events: careState.events,
+                        isLogging: careState.isLogging,
+                        onMarkWatered: () async {
+                          await context
+                              .read<CareLogCubit>()
+                              .markWatered(plantId);
+                          // Nudges the home screen to recompute due/overdue.
+                          await getIt<PlantListCubit>().loadPlants();
+                        },
+                      ),
+                    );
+                  },
                 ),
                 SizedBox(height: spacing.xxl),
               ],

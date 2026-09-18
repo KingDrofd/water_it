@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:water_it/core/di/service_locator.dart';
 import 'package:water_it/core/layout/app_layout.dart';
+import 'package:water_it/core/notifications/reminder_delivery_banner.dart';
 import 'package:water_it/core/settings/app_settings.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
 import 'package:water_it/features/home/presentation/bloc/home_weather_cubit.dart';
@@ -116,6 +117,7 @@ class _HomeViewState extends State<_HomeView> {
             bottom: spacing.xxl,
           ),
           children: [
+            const ReminderDeliveryBanner(),
             BlocBuilder<HomeWeatherCubit, HomeWeatherState>(
               builder: (context, state) {
                 if (state.status == HomeWeatherStatus.loading) {
@@ -183,9 +185,15 @@ class _HomeViewState extends State<_HomeView> {
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8),
                         child: Text(
-                          'Next: ${DateFormat('EEE h:mm a').format(nextReminder.dueAt)}'
-                          ' - ${nextReminder.plantName}',
-                          style: textTheme.bodySmall,
+                          nextReminder.isOverdue
+                              ? 'Overdue: ${nextReminder.plantName}'
+                              : 'Next: ${DateFormat('EEE h:mm a').format(nextReminder.dueAt)}'
+                                  ' - ${nextReminder.plantName}',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: nextReminder.isOverdue
+                                ? colorScheme.error
+                                : null,
+                          ),
                         ),
                       ),
                     HomeReminderStrip(
@@ -193,6 +201,13 @@ class _HomeViewState extends State<_HomeView> {
                       textTheme: textTheme,
                       colorScheme: colorScheme,
                       items: reminderState.items,
+                      onMarkDone: (item) async {
+                        final reminderCubit =
+                            context.read<HomeReminderCubit>();
+                        await reminderCubit.markDone(item.plantId);
+                        // Keep the library's overdue badges in sync.
+                        await getIt<PlantListCubit>().loadPlants();
+                      },
                       onEmptyAction: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(

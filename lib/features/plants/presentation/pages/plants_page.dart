@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:water_it/core/di/service_locator.dart';
 import 'package:water_it/core/layout/app_breakpoints.dart';
 import 'package:water_it/core/layout/app_layout.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
 import 'package:water_it/features/plants/domain/entities/plant.dart';
 import 'package:water_it/features/plants/presentation/bloc/plant_list_cubit.dart';
+import 'package:water_it/features/plants/presentation/bloc/room_cubit.dart';
 import 'package:water_it/features/plants/presentation/pages/plant_detail_page.dart';
+import 'package:water_it/features/plants/presentation/utils/care_field_labels.dart';
 import 'package:water_it/features/plants/presentation/utils/reminder_formatters.dart';
 import 'package:water_it/features/plants/presentation/widgets/plant_card.dart';
+import 'package:water_it/features/plants/presentation/widgets/room_widgets.dart';
 
 enum PlantListView { gridOne, gridTwo, list }
 
@@ -20,6 +24,20 @@ class PlantsPage extends StatefulWidget {
 
 class _PlantsPageState extends State<PlantsPage> {
   PlantListView _view = PlantListView.gridTwo;
+  String? _selectedRoomId;
+  late final RoomCubit _roomCubit;
+
+  @override
+  void initState() {
+    super.initState();
+    _roomCubit = getIt<RoomCubit>()..load();
+  }
+
+  @override
+  void dispose() {
+    _roomCubit.close();
+    super.dispose();
+  }
 
   void _setView(PlantListView view) {
     setState(() {
@@ -27,41 +45,88 @@ class _PlantsPageState extends State<PlantsPage> {
     });
   }
 
+  List<Plant> _visiblePlants(List<Plant> plants) {
+    final roomId = _selectedRoomId;
+    if (roomId == null) {
+      return plants;
+    }
+    if (roomId == RoomFilterChips.unassignedId) {
+      return plants.where((p) => p.roomId == null).toList();
+    }
+    return plants.where((p) => p.roomId == roomId).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final spacing = Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        final gutter = AppLayout.gutter(width);
-        final listState = context.watch<PlantListCubit>().state;
+    return BlocProvider.value(
+      value: _roomCubit,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          final gutter = AppLayout.gutter(width);
+          final listState = context.watch<PlantListCubit>().state;
 
-        return CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: spacing.lg,
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.only(bottom: spacing.md),
-                child: _ViewToggle(
-                  selected: _view,
-                  onChanged: _setView,
+          return CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: spacing.lg,
                 ),
               ),
-            ),
-            SliverPadding(
-              padding: EdgeInsets.only(
-                bottom: spacing.xxl,
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: spacing.sm),
+                  child: _ViewToggle(
+                    selected: _view,
+                    onChanged: _setView,
+                  ),
+                ),
               ),
-              sliver: _buildBody(width, gutter, listState),
-            ),
-          ],
-        );
-      },
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: spacing.md),
+                  child: BlocBuilder<RoomCubit, RoomState>(
+                    builder: (context, roomState) {
+                      return RoomFilterChips(
+                        rooms: roomState.rooms,
+                        selectedRoomId: _selectedRoomId,
+                        onSelected: (roomId) {
+                          setState(() {
+                            _selectedRoomId = roomId;
+                          });
+                        },
+                        onManage: () async {
+                          await showManageRoomsSheet(context, _roomCubit);
+                          // A deleted room may have been the active filter.
+                          final ids = _roomCubit.state.rooms
+                              .map((r) => r.id)
+                              .toSet();
+                          if (_selectedRoomId != null &&
+                              !ids.contains(_selectedRoomId)) {
+                            setState(() {
+                              _selectedRoomId = null;
+                            });
+                          }
+                          // Room deletion unassigns plants — refresh them.
+                          await getIt<PlantListCubit>().loadPlants();
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: EdgeInsets.only(
+                  bottom: spacing.xxl,
+                ),
+                sliver: _buildBody(width, gutter, listState),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -90,14 +155,25 @@ class _PlantsPageState extends State<PlantsPage> {
         );
       case PlantListStatus.initial:
       case PlantListStatus.loaded:
-        final plants = state.plants;
+        final plants = _visiblePlants(state.plants);
         if (plants.isEmpty) {
-          return const SliverFillRemaining(
+          final emptyState = switch (_selectedRoomId) {
+            null => const _EmptyState(
+                title: 'No plants yet',
+                subtitle: 'Tap the + button to add your first plant.',
+              ),
+            RoomFilterChips.unassignedId => const _EmptyState(
+                title: 'No unassigned plants',
+                subtitle: 'Every plant has a room.',
+              ),
+            _ => const _EmptyState(
+                title: 'No plants in this room',
+                subtitle: 'Assign plants to it from their edit page.',
+              ),
+          };
+          return SliverFillRemaining(
             hasScrollBody: false,
-            child: _EmptyState(
-              title: 'No plants yet',
-              subtitle: 'Tap the + button to add your first plant.',
-            ),
+            child: emptyState,
           );
         }
         switch (_view) {
@@ -116,6 +192,7 @@ class _PlantsPageState extends State<PlantsPage> {
                       onTap: () => _openDetail(context, plant),
                       onLongPress: () => _confirmDelete(context, plant),
                       imagePath: _displayImagePath(plant),
+                      isOverdue: state.overduePlantIds.contains(plant.id),
                     ),
                   );
                 },
@@ -137,6 +214,7 @@ class _PlantsPageState extends State<PlantsPage> {
                       onTap: () => _openDetail(context, plant),
                       onLongPress: () => _confirmDelete(context, plant),
                       imagePath: _displayImagePath(plant),
+                      isOverdue: state.overduePlantIds.contains(plant.id),
                     ),
                   );
                 },
@@ -159,6 +237,7 @@ class _PlantsPageState extends State<PlantsPage> {
                     onTap: () => _openDetail(context, plant),
                     onLongPress: () => _confirmDelete(context, plant),
                     imagePath: _displayImagePath(plant),
+                    isOverdue: state.overduePlantIds.contains(plant.id),
                   );
                 },
                 childCount: plants.length,
@@ -186,9 +265,9 @@ class _PlantsPageState extends State<PlantsPage> {
   }
 
   String _plantSubtitle(Plant plant) {
-    return plant.preferredLighting ??
+    return plant.preferredLighting?.label ??
         plant.scientificName ??
-        plant.wateringLevel ??
+        plant.wateringLevel?.label ??
         'No lighting details yet';
   }
 
@@ -197,7 +276,7 @@ class _PlantsPageState extends State<PlantsPage> {
     if (reminders.isNotEmpty) {
       return formatReminderSubtitle(reminders.first);
     }
-    return plant.wateringLevel ?? 'Set a watering schedule';
+    return plant.wateringLevel?.label ?? 'Set a watering schedule';
   }
 
   void _openDetail(BuildContext context, Plant plant) {

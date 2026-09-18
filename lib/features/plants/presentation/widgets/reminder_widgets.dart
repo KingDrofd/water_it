@@ -10,6 +10,7 @@ class ReminderDraft {
     required this.id,
     required this.notesController,
     this.preferredTime,
+    this.createdAt,
     Set<int>? weekdays,
   }) : weekdays = weekdays ?? <int>{};
 
@@ -26,6 +27,7 @@ class ReminderDraft {
       id: reminder.id,
       notesController: TextEditingController(text: reminder.notes ?? ''),
       preferredTime: reminder.preferredTime,
+      createdAt: reminder.createdAt,
       weekdays: reminder.weekdays.toSet(),
     );
   }
@@ -33,6 +35,10 @@ class ReminderDraft {
   final String id;
   final TextEditingController notesController;
   DateTime? preferredTime;
+
+  /// Null for a draft the user just added; existing reminders keep their
+  /// original creation time so editing a plant doesn't reset overdue state.
+  final DateTime? createdAt;
   final Set<int> weekdays;
 
   void dispose() {

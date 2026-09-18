@@ -13,6 +13,7 @@ class PlantCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
   final String? imagePath;
+  final bool isOverdue;
 
   const PlantCard({
     super.key,
@@ -23,6 +24,7 @@ class PlantCard extends StatelessWidget {
     this.onTap,
     this.onLongPress,
     this.imagePath,
+    this.isOverdue = false,
   });
 
   @override
@@ -49,6 +51,7 @@ class PlantCard extends StatelessWidget {
                 maxLines: 1,
                 showSubtitle: true,
                 showSchedule: false,
+                isOverdue: isOverdue,
               ),
             ),
             const Icon(Icons.chevron_right),
@@ -70,6 +73,7 @@ class PlantCard extends StatelessWidget {
                 maxLines: 2,
                 showSubtitle: true,
                 showSchedule: true,
+                isOverdue: isOverdue,
               ),
             ),
           ],
@@ -95,6 +99,12 @@ class PlantCard extends StatelessWidget {
                 showSchedule: true,
               ),
             ),
+            if (isOverdue)
+              Positioned(
+                top: spacing.sm,
+                right: spacing.sm,
+                child: const _OverdueBadge(),
+              ),
           ],
         ),
     };
@@ -115,6 +125,31 @@ class PlantCard extends StatelessWidget {
             style: textTheme.bodySmall,
             child: content,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OverdueBadge extends StatelessWidget {
+  const _OverdueBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        'Overdue',
+        style: textTheme.labelSmall?.copyWith(
+          color: colorScheme.onErrorContainer,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -203,6 +238,7 @@ class _CardText extends StatelessWidget {
   final int maxLines;
   final bool showSubtitle;
   final bool showSchedule;
+  final bool isOverdue;
 
   const _CardText({
     required this.name,
@@ -211,6 +247,7 @@ class _CardText extends StatelessWidget {
     required this.maxLines,
     required this.showSubtitle,
     required this.showSchedule,
+    this.isOverdue = false,
   });
 
   @override
@@ -222,11 +259,21 @@ class _CardText extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
-          name,
-          style: textTheme.titleSmall,
-          maxLines: maxLines,
-          overflow: TextOverflow.ellipsis,
+        Row(
+          children: [
+            Flexible(
+              child: Text(
+                name,
+                style: textTheme.titleSmall,
+                maxLines: maxLines,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (isOverdue) ...[
+              const SizedBox(width: 6),
+              const _OverdueBadge(),
+            ],
+          ],
         ),
         if (showSubtitle) ...[
           const SizedBox(height: 2),
