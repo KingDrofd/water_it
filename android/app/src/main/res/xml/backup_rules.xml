@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android Auto Backup (API 30 and below). Include-only: the database and
+     settings ride the user's Google backup; plant photos are excluded for
+     size (the manual zip export covers them). -->
+<full-backup-content>
+    <include domain="database" path="water_it.db" />
+    <include domain="sharedpref" path="FlutterSharedPreferences.xml" />
+</full-backup-content>

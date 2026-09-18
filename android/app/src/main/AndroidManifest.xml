@@ -1,12 +1,25 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Weather lookups. Flutter only auto-adds this to the debug/profile
+         manifests, so without it release builds fail DNS with errno 7. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Lets flutter_local_notifications' boot receiver re-arm reminders after
+         a restart; without it Android never delivers BOOT_COMPLETED and every
+         scheduled reminder is lost until the app is opened again. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- Reminder delivery: Doze/Battery Saver otherwise defers or drops scheduled
+         reminders. Requested only from a deliberate tap in Settings. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <application
         android:label="water_it"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules">
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
             android:exported="false" />
