@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
+import 'package:water_it/core/widgets/pickers/app_picker_sheet.dart';
 import 'package:water_it/features/plants/domain/entities/care_profile.dart';
 import 'package:water_it/features/plants/domain/entities/room.dart';
 import 'package:water_it/features/plants/presentation/utils/care_field_labels.dart';
@@ -84,7 +85,7 @@ class PlantFormContent extends StatelessWidget {
         SizedBox(height: spacing.xl),
         Text(
           'Basics',
-          style: textTheme.displaySmall?.copyWith(fontSize: 22),
+          style: textTheme.titleLarge,
         ),
         SizedBox(height: spacing.sm),
         TextField(
@@ -128,47 +129,53 @@ class PlantFormContent extends StatelessWidget {
         ),
         if (rooms.isNotEmpty) ...[
           SizedBox(height: spacing.sm),
-          _CareDropdown<String>(
+          AppSelectField<String>(
             label: 'Room',
-            labelStyle: labelStyle,
+            placeholder: 'Unassigned',
             value: rooms.any((r) => r.id == roomId) ? roomId : null,
-            values: [for (final room in rooms) room.id],
-            display: (id) => rooms.firstWhere((r) => r.id == id).name,
+            options: [
+              const AppPickerOption<String?>(
+                value: null,
+                label: 'Unassigned',
+              ),
+              for (final room in rooms)
+                AppPickerOption<String?>(
+                  value: room.id,
+                  label: room.name,
+                  icon: room.isOutdoor
+                      ? Icons.wb_sunny_rounded
+                      : Icons.chair_rounded,
+                ),
+            ],
             onChanged: onRoomChanged,
           ),
         ],
         SizedBox(height: spacing.xl),
         Text(
           'Care',
-          style: textTheme.displaySmall?.copyWith(fontSize: 22),
+          style: textTheme.titleLarge,
         ),
         SizedBox(height: spacing.sm),
         _FieldRow(
-          left: _CareDropdown<LightingLevel>(
+          left: AppSelectField<LightingLevel>(
             label: 'Preferred lighting',
-            labelStyle: labelStyle,
             value: lighting,
-            values: LightingLevel.values,
-            display: (v) => v.label,
+            options: _optionsFor(LightingLevel.values, (v) => v.label),
             onChanged: onLightingChanged,
           ),
-          right: _CareDropdown<WateringLevel>(
+          right: AppSelectField<WateringLevel>(
             label: 'Watering level',
-            labelStyle: labelStyle,
             value: watering,
-            values: WateringLevel.values,
-            display: (v) => v.label,
+            options: _optionsFor(WateringLevel.values, (v) => v.label),
             onChanged: onWateringChanged,
           ),
         ),
         SizedBox(height: spacing.sm),
         _FieldRow(
-          left: _CareDropdown<SoilKind>(
+          left: AppSelectField<SoilKind>(
             label: 'Soil type',
-            labelStyle: labelStyle,
             value: soil,
-            values: SoilKind.values,
-            display: (v) => v.label,
+            options: _optionsFor(SoilKind.values, (v) => v.label),
             onChanged: onSoilChanged,
           ),
           right: TextField(
@@ -193,7 +200,7 @@ class PlantFormContent extends StatelessWidget {
         SizedBox(height: spacing.xl),
         Text(
           'Reminders',
-          style: textTheme.displaySmall?.copyWith(fontSize: 22),
+          style: textTheme.titleLarge,
         ),
         SizedBox(height: spacing.md),
         ...reminderInputs,
@@ -209,41 +216,17 @@ class PlantFormContent extends StatelessWidget {
   }
 }
 
-/// Nullable dropdown for the structured care vocabularies; the null item
-/// reads "Not set" so every field stays optional.
-class _CareDropdown<T> extends StatelessWidget {
-  final String label;
-  final TextStyle? labelStyle;
-  final T? value;
-  final List<T> values;
-  final String Function(T) display;
-  final ValueChanged<T?> onChanged;
-
-  const _CareDropdown({
-    required this.label,
-    required this.labelStyle,
-    required this.value,
-    required this.values,
-    required this.display,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButtonFormField<T?>(
-      initialValue: value,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: labelStyle,
-      ),
-      items: [
-        DropdownMenuItem<T?>(value: null, child: const Text('Not set')),
-        for (final item in values)
-          DropdownMenuItem<T?>(value: item, child: Text(display(item))),
-      ],
-      onChanged: onChanged,
-    );
-  }
+/// Enum values as picker rows, with a leading "Not set" so every care
+/// field stays optional.
+List<AppPickerOption<T?>> _optionsFor<T>(
+  List<T> values,
+  String Function(T) display,
+) {
+  return [
+    const AppPickerOption(value: null, label: 'Not set'),
+    for (final value in values)
+      AppPickerOption<T?>(value: value, label: display(value)),
+  ];
 }
 
 class _FieldRow extends StatelessWidget {

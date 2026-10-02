@@ -1,81 +1,132 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:water_it/core/widgets/buttons/app_primary_button.dart';
+import 'package:water_it/core/theme/app_colors.dart';
 import 'package:water_it/features/plants/domain/entities/care_event.dart';
+import 'package:water_it/features/plants/domain/entities/care_task.dart';
+import 'package:water_it/features/plants/presentation/utils/care_task_visuals.dart';
 
-/// "Mark watered" action plus the recent care timeline for one plant.
+/// The recent care timeline for one plant.
 class CareHistorySection extends StatelessWidget {
   const CareHistorySection({
     super.key,
     required this.events,
-    required this.isLogging,
-    required this.onMarkWatered,
+    this.taskLabels = const {},
     this.maxEvents = 6,
   });
 
   final List<CareEvent> events;
-  final bool isLogging;
-  final VoidCallback onMarkWatered;
+
+  /// Task id -> label, so completed custom tasks show their own name.
+  final Map<String, String> taskLabels;
   final int maxEvents;
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+    final palette = AppPalette.of(context);
     final visible = events.take(maxEvents).toList();
 
+    if (visible.isEmpty) {
+      return Text(
+        'No care logged yet.',
+        style: Theme.of(context)
+            .textTheme
+            .bodySmall
+            ?.copyWith(color: palette.muted),
+      );
+    }
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AppPrimaryButton(
-          onPressed: isLogging ? null : onMarkWatered,
-          icon: const Icon(Icons.water_drop),
-          label: isLogging ? 'Saving...' : 'Mark watered',
-        ),
-        const SizedBox(height: 12),
-        if (visible.isEmpty)
-          Text('No care logged yet.', style: textTheme.bodySmall)
-        else
-          ...visible.map((event) => CareEventRow(event: event)),
+        for (final event in visible)
+          CareEventRow(event: event, customLabel: taskLabels[event.taskId]),
       ],
     );
   }
 }
 
 class CareEventRow extends StatelessWidget {
-  const CareEventRow({super.key, required this.event});
+  const CareEventRow({super.key, required this.event, this.customLabel});
 
   final CareEvent event;
+  final String? customLabel;
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
+    final type = careTaskTypeOf(event.type);
     final note = event.note?.trim();
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.water_drop, size: 18, color: colorScheme.primary),
-          const SizedBox(width: 10),
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: careTaskTileColor(type, palette),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              careTaskGlyph(type),
+              size: 17,
+              color: careTaskTint(type, palette),
+            ),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Watered', style: textTheme.labelLarge),
+                Text(
+                  careEventTitle(type, customLabel),
+                  style: textTheme.bodyMedium,
+                ),
                 if (note != null && note.isNotEmpty)
-                  Text(note, style: textTheme.bodySmall),
+                  Text(
+                    note,
+                    style: textTheme.bodySmall?.copyWith(color: palette.muted),
+                  ),
               ],
             ),
           ),
           Text(
             formatCareEventTime(event.completedAt),
-            style: textTheme.labelSmall,
+            style: textTheme.labelSmall?.copyWith(color: palette.muted),
           ),
         ],
       ),
     );
+  }
+}
+
+/// Stored event type name back to a task type; unknown names read as custom.
+CareTaskType careTaskTypeOf(String name) {
+  for (final type in CareTaskType.values) {
+    if (type.name == name) {
+      return type;
+    }
+  }
+  return CareTaskType.custom;
+}
+
+/// Past-tense timeline title: "Watered", "Fertilized", or a custom task's
+/// own name.
+String careEventTitle(CareTaskType type, [String? customLabel]) {
+  switch (type) {
+    case CareTaskType.water:
+      return 'Watered';
+    case CareTaskType.fertilize:
+      return 'Fertilized';
+    case CareTaskType.mist:
+      return 'Misted';
+    case CareTaskType.repot:
+      return 'Repotted';
+    case CareTaskType.prune:
+      return 'Pruned';
+    case CareTaskType.custom:
+      final label = customLabel?.trim();
+      return label == null || label.isEmpty ? 'Custom task' : label;
   }
 }
 

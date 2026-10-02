@@ -99,7 +99,10 @@ class ReminderPlanner {
               title: title,
               body: body,
               scheduledAt: nextIntervalOccurrence(
-                anchor: latestEvents[task.plantId]?[task.type.name],
+                // Matches CareTaskSchedule: a never-done task counts
+                // from creation rather than being due at once.
+                anchor: latestEvents[task.plantId]?[task.type.name] ??
+                    task.createdAt,
                 intervalDays: task.intervalDays,
                 hour: hour,
                 minute: minute,
@@ -174,7 +177,8 @@ class ReminderPlanner {
         return task.weekdays.contains(day.weekday);
       case CareScheduleType.interval:
         if (task.intervalDays < 1) return false;
-        final anchor = latestEvents[task.plantId]?[task.type.name];
+        final anchor =
+            latestEvents[task.plantId]?[task.type.name] ?? task.createdAt;
         if (anchor == null) {
           // Never completed: treat as due.
           return true;

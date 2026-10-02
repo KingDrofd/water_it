@@ -41,6 +41,7 @@ extension TemperatureUnitLabel on TemperatureUnit {
 
 class AppSettings {
   static const _keyTempUnit = 'settings_temperature_unit';
+  static const _keyDisplayName = 'settings_display_name';
   static const _keyWateringReminders = 'settings_notify_watering_reminders';
   static const _keyDailySummary = 'settings_notify_daily_summary';
   static const _keyNotificationPrompted = 'settings_notify_prompted';
@@ -49,6 +50,32 @@ class AppSettings {
   static const _keyLastNotificationTest = 'debug_last_notification_test';
   static final temperatureUnitNotifier =
       ValueNotifier<TemperatureUnit>(TemperatureUnit.celsius);
+
+  /// Optional first name for the Home greeting. Stored on-device only.
+  static final displayNameNotifier = ValueNotifier<String?>(null);
+
+  static Future<void> syncDisplayName() async {
+    displayNameNotifier.value = await getDisplayName();
+  }
+
+  static Future<String?> getDisplayName() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString(_keyDisplayName)?.trim();
+    return name == null || name.isEmpty ? null : name;
+  }
+
+  /// Saves [name]; blank or null clears it back to the generic greeting.
+  static Future<void> setDisplayName(String? name) async {
+    final prefs = await SharedPreferences.getInstance();
+    final trimmed = name?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      await prefs.remove(_keyDisplayName);
+      displayNameNotifier.value = null;
+      return;
+    }
+    await prefs.setString(_keyDisplayName, trimmed);
+    displayNameNotifier.value = trimmed;
+  }
 
   static Future<void> syncTemperatureUnit() async {
     temperatureUnitNotifier.value = await getTemperatureUnit();

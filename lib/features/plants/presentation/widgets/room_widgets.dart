@@ -33,7 +33,8 @@ class RoomFilterChips extends StatelessWidget {
       height: 40,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.symmetric(horizontal: spacing.lg),
+        // The shell already applies page padding.
+        padding: EdgeInsets.zero,
         children: [
           if (rooms.isNotEmpty) ...[
             ChoiceChip(

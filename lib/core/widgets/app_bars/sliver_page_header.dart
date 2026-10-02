@@ -51,11 +51,10 @@ class _SliverPageHeaderDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
     final spacing = Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
 
     return Container(
-      color: colorScheme.background,
+      color: Theme.of(context).scaffoldBackgroundColor,
       padding: EdgeInsets.symmetric(horizontal: spacing.lg),
       child: Stack(
         children: [
@@ -73,7 +72,7 @@ class _SliverPageHeaderDelegate extends SliverPersistentHeaderDelegate {
             alignment: Alignment.center,
             child: Text(
               title,
-              style: textTheme.displaySmall?.copyWith(fontSize: 26),
+              style: textTheme.headlineSmall,
               textAlign: TextAlign.center,
             ),
           ),

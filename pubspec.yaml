@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.1.6+14
+version: 1.2.2+17
 
 environment:
   sdk: ^3.10.4
@@ -91,18 +91,36 @@ flutter:
       fonts:
         - asset: assets/fonts/Quicksand/Quicksand-Regular.ttf
           weight: 400
+        - asset: assets/fonts/Quicksand/Quicksand-Medium.ttf
+          weight: 500
         - asset: assets/fonts/Quicksand/Quicksand-SemiBold.ttf
           weight: 600
+        - asset: assets/fonts/Quicksand/Quicksand-Bold.ttf
+          weight: 700
     - family: Raleway
       fonts:
         - asset: assets/fonts/Raleway/Raleway-Regular.ttf
           weight: 400
+        - asset: assets/fonts/Raleway/Raleway-Italic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/Raleway/Raleway-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Raleway/Raleway-MediumItalic.ttf
+          weight: 500
+          style: italic
         - asset: assets/fonts/Raleway/Raleway-SemiBold.ttf
           weight: 600
+        - asset: assets/fonts/Raleway/Raleway-Bold.ttf
+          weight: 700
 
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/weather/
+    # SIL Open Font License texts, registered with the Licenses page.
+    - assets/fonts/Pacifico/OFL.txt
+    - assets/fonts/Quicksand/OFL.txt
+    - assets/fonts/Raleway/OFL.txt
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

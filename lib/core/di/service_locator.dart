@@ -23,8 +23,9 @@ import 'package:water_it/features/plants/domain/usecases/delete_care_task.dart';
 import 'package:water_it/features/plants/domain/usecases/delete_plant.dart';
 import 'package:water_it/features/plants/domain/usecases/delete_room.dart';
 import 'package:water_it/features/plants/domain/usecases/get_care_events.dart';
+import 'package:water_it/features/plants/domain/usecases/get_all_care_tasks.dart';
 import 'package:water_it/features/plants/domain/usecases/get_care_tasks.dart';
-import 'package:water_it/features/plants/domain/usecases/get_latest_water_events.dart';
+import 'package:water_it/features/plants/domain/usecases/get_latest_care_events.dart';
 import 'package:water_it/features/plants/domain/usecases/get_plant.dart';
 import 'package:water_it/features/plants/domain/usecases/get_plants.dart';
 import 'package:water_it/features/plants/domain/usecases/get_rooms.dart';
@@ -101,10 +102,6 @@ Future<void> setupLocator() async {
     () => GetCareEvents(getIt<CareLogRepository>()),
     dependsOn: [CareLogRepository],
   );
-  getIt.registerSingletonWithDependencies<GetLatestWaterEvents>(
-    () => GetLatestWaterEvents(getIt<CareLogRepository>()),
-    dependsOn: [CareLogRepository],
-  );
 
   getIt.registerSingletonWithDependencies<CareTaskLocalDataSource>(
     () => CareTaskLocalDataSourceImpl(getIt<Database>()),
@@ -117,6 +114,14 @@ Future<void> setupLocator() async {
   getIt.registerSingletonWithDependencies<GetCareTasks>(
     () => GetCareTasks(getIt<CareTaskRepository>()),
     dependsOn: [CareTaskRepository],
+  );
+  getIt.registerSingletonWithDependencies<GetAllCareTasks>(
+    () => GetAllCareTasks(getIt<CareTaskRepository>()),
+    dependsOn: [CareTaskRepository],
+  );
+  getIt.registerSingletonWithDependencies<GetLatestCareEvents>(
+    () => GetLatestCareEvents(getIt<CareLogRepository>()),
+    dependsOn: [CareLogRepository],
   );
   getIt.registerSingletonWithDependencies<SaveCareTask>(
     () => SaveCareTask(getIt<CareTaskRepository>()),
@@ -192,13 +197,15 @@ Future<void> setupLocator() async {
     () => PlantListCubit(
       getIt<GetPlants>(),
       getIt<DeletePlant>(),
-      getIt<GetLatestWaterEvents>(),
+      getIt<GetAllCareTasks>(),
+      getIt<GetLatestCareEvents>(),
       getIt<ReminderScheduler>(),
     ),
     dependsOn: [
       GetPlants,
       DeletePlant,
-      GetLatestWaterEvents,
+      GetAllCareTasks,
+      GetLatestCareEvents,
       ReminderScheduler,
     ],
   );
@@ -218,7 +225,9 @@ Future<void> setupLocator() async {
   getIt.registerFactory<HomeReminderCubit>(
     () => HomeReminderCubit(
       getIt<GetPlants>(),
-      getIt<GetLatestWaterEvents>(),
+      getIt<GetAllCareTasks>(),
+      getIt<GetLatestCareEvents>(),
+      getIt<GetRooms>(),
       getIt<LogCareEvent>(),
     ),
   );

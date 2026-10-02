@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import 'package:water_it/features/plants/domain/entities/care_event.dart';
+import 'package:water_it/features/plants/domain/entities/care_task.dart';
 import 'package:water_it/features/plants/domain/usecases/get_care_events.dart';
 import 'package:water_it/features/plants/domain/usecases/log_care_event.dart';
 
@@ -19,6 +20,18 @@ class CareLogState extends Equatable {
   final List<CareEvent> events;
   final bool isLogging;
   final String? errorMessage;
+
+  /// Most recent completion of each task type in the loaded history.
+  Map<String, DateTime> get latestByType {
+    final latest = <String, DateTime>{};
+    for (final event in events) {
+      final current = latest[event.type];
+      if (current == null || event.completedAt.isAfter(current)) {
+        latest[event.type] = event.completedAt;
+      }
+    }
+    return latest;
+  }
 
   CareLogState copyWith({
     CareLogStatus? status,
@@ -61,8 +74,9 @@ class CareLogCubit extends Cubit<CareLogState> {
     }
   }
 
-  Future<void> markWatered(
-    String plantId, {
+  /// Logs a completion of [task] and reloads the plant's history.
+  Future<void> markDone(
+    CareTask task, {
     CareEventSource source = CareEventSource.detail,
   }) async {
     if (state.isLogging) {
@@ -73,12 +87,14 @@ class CareLogCubit extends Cubit<CareLogState> {
       await _logCareEvent(
         CareEvent(
           id: _uuid.v4(),
-          plantId: plantId,
+          plantId: task.plantId,
+          taskId: task.id,
+          type: task.type.name,
           completedAt: DateTime.now(),
           source: source,
         ),
       );
-      final events = await _getCareEvents(plantId);
+      final events = await _getCareEvents(task.plantId);
       emit(
         state.copyWith(
           status: CareLogStatus.loaded,

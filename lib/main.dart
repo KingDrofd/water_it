@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:water_it/core/app_info/app_info.dart';
 import 'package:water_it/core/di/service_locator.dart';
@@ -14,10 +16,27 @@ final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  _registerFontLicenses();
   await setupLocator();
   _wireNotificationCallbacks();
   runApp(const WaterItApp());
   await _openPlantFromLaunchNotification();
+}
+
+/// The bundled fonts are SIL Open Font License; the licence has to travel
+/// with them, so it is listed on the Licenses page beside the packages'.
+void _registerFontLicenses() {
+  const fonts = {
+    'Pacifico': 'assets/fonts/Pacifico/OFL.txt',
+    'Quicksand': 'assets/fonts/Quicksand/OFL.txt',
+    'Raleway': 'assets/fonts/Raleway/OFL.txt',
+  };
+  LicenseRegistry.addLicense(() async* {
+    for (final entry in fonts.entries) {
+      final text = await rootBundle.loadString(entry.value);
+      yield LicenseEntryWithLineBreaks([entry.key], text);
+    }
+  });
 }
 
 void _wireNotificationCallbacks() {
@@ -62,7 +81,7 @@ class WaterItApp extends StatelessWidget {
       title: AppInfo.appName,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.light,
+      themeMode: ThemeMode.system,
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
         final scaler = AppTheme.textScalerForWidth(mediaQuery.size.width);

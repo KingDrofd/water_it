@@ -6,9 +6,6 @@ abstract class CareLogRepository {
   /// Events for one plant, most recent first.
   Future<List<CareEvent>> getEventsForPlant(String plantId);
 
-  /// Latest water-event timestamp per plant id (plants with no events absent).
-  Future<Map<String, DateTime>> getLatestWaterEvents();
-
   /// Latest completion per plant per task type: plantId -> type -> timestamp.
   /// Anchors interval schedules ("every N days from the last completion").
   Future<Map<String, Map<String, DateTime>>> getLatestEvents();

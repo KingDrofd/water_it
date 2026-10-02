@@ -3,13 +3,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:water_it/core/di/service_locator.dart';
 import 'package:water_it/core/layout/app_breakpoints.dart';
 import 'package:water_it/core/layout/app_layout.dart';
+import 'package:water_it/core/theme/app_colors.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
+import 'package:water_it/features/add_plant/presentation/add_plant_sheet.dart';
 import 'package:water_it/features/plants/domain/entities/plant.dart';
 import 'package:water_it/features/plants/presentation/bloc/plant_list_cubit.dart';
 import 'package:water_it/features/plants/presentation/bloc/room_cubit.dart';
 import 'package:water_it/features/plants/presentation/pages/plant_detail_page.dart';
 import 'package:water_it/features/plants/presentation/utils/care_field_labels.dart';
-import 'package:water_it/features/plants/presentation/utils/reminder_formatters.dart';
+import 'package:water_it/features/plants/presentation/utils/task_status_label.dart';
 import 'package:water_it/features/plants/presentation/widgets/plant_card.dart';
 import 'package:water_it/features/plants/presentation/widgets/room_widgets.dart';
 
@@ -71,16 +73,19 @@ class _PlantsPageState extends State<PlantsPage> {
           return CustomScrollView(
             slivers: [
               SliverToBoxAdapter(
-                child: SizedBox(
-                  height: spacing.lg,
-                ),
-              ),
-              SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.only(bottom: spacing.sm),
-                  child: _ViewToggle(
-                    selected: _view,
-                    onChanged: _setView,
+                  padding: EdgeInsets.only(
+                    top: spacing.md,
+                    bottom: spacing.md,
+                  ),
+                  child: _LibraryHeader(
+                    plantCount: listState.plants.length,
+                    view: _view,
+                    onViewChanged: _setView,
+                    onAddPlant: () async {
+                      await showAddPlantSheet(context);
+                      await getIt<PlantListCubit>().loadPlants();
+                    },
                   ),
                 ),
               ),
@@ -187,7 +192,8 @@ class _PlantsPageState extends State<PlantsPage> {
                     child: PlantCard(
                       name: plant.name,
                       subtitle: _plantSubtitle(plant),
-                      schedule: _plantSchedule(plant),
+                      status: _statusLabel(state, plant),
+                      statusType: state.nextTasks[plant.id]?.task.type,
                       layout: PlantCardLayout.list,
                       onTap: () => _openDetail(context, plant),
                       onLongPress: () => _confirmDelete(context, plant),
@@ -209,7 +215,8 @@ class _PlantsPageState extends State<PlantsPage> {
                     child: PlantCard(
                       name: plant.name,
                       subtitle: _plantSubtitle(plant),
-                      schedule: _plantSchedule(plant),
+                      status: _statusLabel(state, plant),
+                      statusType: state.nextTasks[plant.id]?.task.type,
                       layout: PlantCardLayout.wide,
                       onTap: () => _openDetail(context, plant),
                       onLongPress: () => _confirmDelete(context, plant),
@@ -223,7 +230,7 @@ class _PlantsPageState extends State<PlantsPage> {
             );
           case PlantListView.gridTwo:
             final columns = _columnsForWidth(width, _view);
-            const aspectRatio = 0.85;
+            const aspectRatio = 0.78;
 
             return SliverGrid(
               delegate: SliverChildBuilderDelegate(
@@ -232,7 +239,8 @@ class _PlantsPageState extends State<PlantsPage> {
                   return PlantCard(
                     name: plant.name,
                     subtitle: _plantSubtitle(plant),
-                    schedule: _plantSchedule(plant),
+                    status: _statusLabel(state, plant),
+                    statusType: state.nextTasks[plant.id]?.task.type,
                     layout: PlantCardLayout.grid,
                     onTap: () => _openDetail(context, plant),
                     onLongPress: () => _confirmDelete(context, plant),
@@ -265,18 +273,14 @@ class _PlantsPageState extends State<PlantsPage> {
   }
 
   String _plantSubtitle(Plant plant) {
-    return plant.preferredLighting?.label ??
-        plant.scientificName ??
-        plant.wateringLevel?.label ??
-        'No lighting details yet';
+    return plant.scientificName ??
+        plant.preferredLighting?.label ??
+        '';
   }
 
-  String _plantSchedule(Plant plant) {
-    final reminders = plant.reminders;
-    if (reminders.isNotEmpty) {
-      return formatReminderSubtitle(reminders.first);
-    }
-    return plant.wateringLevel?.label ?? 'Set a watering schedule';
+  String? _statusLabel(PlantListState state, Plant plant) {
+    final next = state.nextTasks[plant.id];
+    return next == null ? null : taskStatusLabel(next, DateTime.now());
   }
 
   void _openDetail(BuildContext context, Plant plant) {
@@ -367,42 +371,121 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-class _ViewToggle extends StatelessWidget {
-  final PlantListView selected;
-  final ValueChanged<PlantListView> onChanged;
+class _LibraryHeader extends StatelessWidget {
+  const _LibraryHeader({
+    required this.plantCount,
+    required this.view,
+    required this.onViewChanged,
+    required this.onAddPlant,
+  });
 
+  final int plantCount;
+  final PlantListView view;
+  final ValueChanged<PlantListView> onViewChanged;
+  final VoidCallback onAddPlant;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Water It',
+          style: textTheme.displaySmall?.copyWith(color: palette.primary),
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: Text('Your plants', style: textTheme.headlineSmall),
+            ),
+            Material(
+              color: palette.accent,
+              borderRadius: BorderRadius.circular(16),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: onAddPlant,
+                child: SizedBox.square(
+                  dimension: 48,
+                  child: Icon(
+                    Icons.add_rounded,
+                    color: palette.onAccent,
+                    semanticLabel: 'Add plant',
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                plantCount == 1 ? '1 plant' : '$plantCount plants',
+                style: textTheme.bodyMedium?.copyWith(color: palette.muted),
+              ),
+            ),
+            _ViewToggle(selected: view, onChanged: onViewChanged),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _ViewToggle extends StatelessWidget {
   const _ViewToggle({
     required this.selected,
     required this.onChanged,
   });
 
+  final PlantListView selected;
+  final ValueChanged<PlantListView> onChanged;
+
+  static const _options = [
+    (PlantListView.gridOne, Icons.view_agenda_rounded, 'Single column'),
+    (PlantListView.gridTwo, Icons.grid_view_rounded, 'Grid'),
+    (PlantListView.list, Icons.view_list_rounded, 'List'),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final spacing = Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
+    final palette = AppPalette.of(context);
 
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: spacing.lg),
-      child: SegmentedButton<PlantListView>(
-        segments: const [
-          ButtonSegment(
-            value: PlantListView.gridOne,
-            icon: Icon(Icons.view_agenda_outlined),
-            label: Text('Single'),
-          ),
-          ButtonSegment(
-            value: PlantListView.gridTwo,
-            icon: Icon(Icons.grid_view_outlined),
-            label: Text('Grid'),
-          ),
-          ButtonSegment(
-            value: PlantListView.list,
-            icon: Icon(Icons.view_list_outlined),
-            label: Text('List'),
-          ),
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: palette.card2,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final (view, icon, label) in _options)
+            Tooltip(
+              message: label,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(9),
+                onTap: () => onChanged(view),
+                child: Container(
+                  width: 36,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: view == selected ? palette.card : Colors.transparent,
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 18,
+                    color: view == selected ? palette.deep : palette.muted,
+                  ),
+                ),
+              ),
+            ),
         ],
-        selected: {selected},
-        onSelectionChanged: (value) => onChanged(value.first),
-        showSelectedIcon: false,
       ),
     );
   }

@@ -19,11 +19,6 @@ class CareLogRepositoryImpl implements CareLogRepository {
   }
 
   @override
-  Future<Map<String, DateTime>> getLatestWaterEvents() {
-    return _localDataSource.getLatestByPlant(CareEvent.waterType);
-  }
-
-  @override
   Future<Map<String, Map<String, DateTime>>> getLatestEvents() {
     return _localDataSource.getLatestByPlantAndType();
   }

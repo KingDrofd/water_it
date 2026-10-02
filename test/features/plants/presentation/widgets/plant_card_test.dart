@@ -15,14 +15,14 @@ void main() {
         const PlantCard(
           name: 'Monstera',
           subtitle: 'Bright indirect',
-          schedule: 'Mon, Thu',
+          status: 'Water in 2 days',
           layout: PlantCardLayout.list,
           isOverdue: true,
         ),
       ),
     );
 
-    expect(find.text('Overdue'), findsOneWidget);
+    expect(find.text('OVERDUE'), findsOneWidget);
   });
 
   testWidgets('hides the overdue badge by default', (tester) async {
@@ -31,13 +31,13 @@ void main() {
         const PlantCard(
           name: 'Monstera',
           subtitle: 'Bright indirect',
-          schedule: 'Mon, Thu',
+          status: 'Water in 2 days',
           layout: PlantCardLayout.list,
         ),
       ),
     );
 
-    expect(find.text('Overdue'), findsNothing);
+    expect(find.text('OVERDUE'), findsNothing);
   });
 
   testWidgets('grid layout places the badge over the image', (tester) async {
@@ -48,7 +48,7 @@ void main() {
           child: PlantCard(
             name: 'Monstera',
             subtitle: 'Bright indirect',
-            schedule: 'Mon, Thu',
+            status: 'Water in 2 days',
             layout: PlantCardLayout.grid,
             isOverdue: true,
           ),
@@ -56,6 +56,6 @@ void main() {
       ),
     );
 
-    expect(find.text('Overdue'), findsOneWidget);
+    expect(find.text('OVERDUE'), findsOneWidget);
   });
 }

@@ -5,9 +5,6 @@ abstract class CareEventLocalDataSource {
   Future<void> insertEvent(CareEventModel event);
   Future<List<CareEventModel>> getEventsForPlant(String plantId);
 
-  /// Latest `completed_at` per plant for the given task type.
-  Future<Map<String, DateTime>> getLatestByPlant(String type);
-
   /// Latest `completed_at` per plant per type: plantId -> type -> timestamp.
   Future<Map<String, Map<String, DateTime>>> getLatestByPlantAndType();
 }
@@ -56,25 +53,6 @@ class CareEventLocalDataSourceImpl implements CareEventLocalDataSource {
       if (parsed == null) continue;
       result.putIfAbsent(row['plant_id'] as String, () => {})[
           row['type'] as String] = parsed;
-    }
-    return result;
-  }
-
-  @override
-  Future<Map<String, DateTime>> getLatestByPlant(String type) async {
-    final rows = await db.rawQuery(
-      'SELECT plant_id, MAX(completed_at) AS latest '
-      'FROM care_events WHERE type = ? GROUP BY plant_id',
-      [type],
-    );
-    final result = <String, DateTime>{};
-    for (final row in rows) {
-      final latest = row['latest'] as String?;
-      if (latest == null) continue;
-      final parsed = DateTime.tryParse(latest);
-      if (parsed != null) {
-        result[row['plant_id'] as String] = parsed;
-      }
     }
     return result;
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:water_it/core/theme/app_colors.dart';
 import 'package:water_it/core/settings/app_settings.dart';
 
 class SettingsSectionCard extends StatelessWidget {
@@ -14,8 +15,7 @@ class SettingsSectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final inputFill = Theme.of(context).inputDecorationTheme.fillColor ??
-        const Color(0xFFF2F2F2);
+    final palette = AppPalette.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -27,10 +27,11 @@ class SettingsSectionCard extends StatelessWidget {
         const SizedBox(height: 6),
         Card(
           margin: EdgeInsets.zero,
-          color: inputFill,
+          color: palette.card,
           clipBehavior: Clip.antiAlias,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: palette.line),
           ),
           child: Column(
             children: [
@@ -41,7 +42,7 @@ class SettingsSectionCard extends StatelessWidget {
                     thickness: 1,
                     indent: 16,
                     endIndent: 16,
-                    color: Theme.of(context).dividerColor.withOpacity(0.35),
+                    color: palette.line,
                   ),
                 Material(
                   color: Colors.transparent,

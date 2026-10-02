@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:water_it/core/di/service_locator.dart';
 import 'package:water_it/core/layout/app_layout.dart';
 import 'package:water_it/core/notifications/reminder_delivery_banner.dart';
 import 'package:water_it/core/settings/app_settings.dart';
+import 'package:water_it/core/theme/app_colors.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
-import 'package:water_it/features/home/presentation/bloc/home_weather_cubit.dart';
+import 'package:water_it/features/add_plant/presentation/add_plant_sheet.dart';
 import 'package:water_it/features/home/presentation/bloc/home_reminder_cubit.dart';
+import 'package:water_it/features/home/presentation/bloc/home_weather_cubit.dart';
 import 'package:water_it/features/home/presentation/utils/home_location_controller.dart';
-import 'package:water_it/features/home/presentation/widgets/home_reminder_strip.dart';
+import 'package:water_it/features/home/presentation/widgets/due_today_list.dart';
 import 'package:water_it/features/home/presentation/widgets/home_weather_section.dart';
 import 'package:water_it/features/plants/presentation/bloc/plant_list_cubit.dart';
-import 'package:water_it/features/plants/presentation/pages/plant_form_page.dart';
 import 'package:water_it/features/plants/presentation/pages/plant_detail_page.dart';
+import 'package:water_it/features/settings/presentation/pages/settings_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -58,6 +60,7 @@ class _HomeViewState extends State<_HomeView> {
     super.initState();
     AppSettings.temperatureUnitNotifier.addListener(_handleTemperatureChange);
     AppSettings.syncTemperatureUnit();
+    AppSettings.syncDisplayName();
     _locationController = HomeLocationController(
       loadWeather: _loadWeather,
       setState: (fn) => setState(fn),
@@ -98,70 +101,102 @@ class _HomeViewState extends State<_HomeView> {
     });
   }
 
+  Future<void> _addPlant() async {
+    await showAddPlantSheet(context);
+    await getIt<PlantListCubit>().loadPlants();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final spacing = Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
+    final spacing =
+        Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
+    final palette = AppPalette.of(context);
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        final gutter = AppLayout.gutter(width);
+        final gutter = AppLayout.gutter(constraints.maxWidth);
 
         return ListView(
-          padding: EdgeInsets.only(
-            left: spacing.lg,
-            right: spacing.lg,
-            top: spacing.lg,
-            bottom: spacing.xxl,
-          ),
+          // Horizontal padding comes from the shell.
+          padding: EdgeInsets.only(top: spacing.md, bottom: spacing.xl),
           children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Water It',
+                    style: textTheme.displayMedium?.copyWith(
+                      color: palette.primary,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Settings',
+                  icon: Icon(Icons.settings_rounded, color: palette.muted),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SettingsPage()),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: spacing.md),
+            ValueListenableBuilder<String?>(
+              valueListenable: AppSettings.displayNameNotifier,
+              builder: (context, name, _) => Text(
+                greetingFor(DateTime.now(), name),
+                style: textTheme.headlineSmall,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              DateFormat('EEEE, MMMM d').format(DateTime.now()),
+              style: textTheme.bodyMedium?.copyWith(color: palette.muted),
+            ),
+            SizedBox(height: spacing.lg),
             const ReminderDeliveryBanner(),
+            BlocBuilder<HomeReminderCubit, HomeReminderState>(
+              builder: (context, state) {
+                final hasPlants =
+                    context.watch<PlantListCubit>().state.plants.isNotEmpty;
+                return DueTodayList(
+                  items: state.items,
+                  hasPlants: hasPlants,
+                  onAddPlant: _addPlant,
+                  onMarkDone: (item) async {
+                    await context.read<HomeReminderCubit>().markDone(item);
+                    // Keeps library badges and the schedule in step.
+                    await getIt<PlantListCubit>().loadPlants();
+                  },
+                  onTapItem: (item) => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => PlantDetailPage(plantId: item.plantId),
+                    ),
+                  ),
+                );
+              },
+            ),
+            SizedBox(height: spacing.md),
             BlocBuilder<HomeWeatherCubit, HomeWeatherState>(
               builder: (context, state) {
-                if (state.status == HomeWeatherStatus.loading) {
-                  return HomeWeatherSection(
-                    slots: buildWeatherPlaceholders(),
-                    spacing: spacing,
-                    colorScheme: colorScheme,
-                    textTheme: textTheme,
-                    gutter: gutter,
-                    isPlaceholder: true,
-                    title: "Today's Weather",
-                    locationLabel: _locationController.locationLabel,
-                    locationNote: _locationController.locationNote,
-                    temperatureUnit: _temperatureUnit,
-                    onLocationTap: () =>
-                        _locationController.promptForLocation(context),
-                  );
-                }
-                if (state.status == HomeWeatherStatus.failure) {
-                  return HomeWeatherSection(
-                    slots: const [],
-                    spacing: spacing,
-                    colorScheme: colorScheme,
-                    textTheme: textTheme,
-                    gutter: gutter,
-                    errorMessage: state.errorMessage ?? 'Weather unavailable.',
-                    title: "Today's Weather",
-                    locationLabel: _locationController.locationLabel,
-                    locationNote: _locationController.locationNote,
-                    temperatureUnit: _temperatureUnit,
-                    onRetry: () {
-                      _locationController.restorePreference(context);
-                    },
-                    onLocationTap: () =>
-                        _locationController.promptForLocation(context),
-                  );
-                }
                 return HomeWeatherSection(
-                  slots: state.slots,
+                  slots: state.status == HomeWeatherStatus.loading
+                      ? buildWeatherPlaceholders()
+                      : state.status == HomeWeatherStatus.failure
+                          ? const []
+                          : state.slots,
                   spacing: spacing,
                   colorScheme: colorScheme,
                   textTheme: textTheme,
                   gutter: gutter,
-                  title: "Today's Weather",
+                  isPlaceholder: state.status == HomeWeatherStatus.loading,
+                  errorMessage: state.status == HomeWeatherStatus.failure
+                      ? state.errorMessage ?? 'Weather unavailable.'
+                      : null,
+                  onRetry: state.status == HomeWeatherStatus.failure
+                      ? () => _locationController.restorePreference(context)
+                      : null,
                   locationLabel: _locationController.locationLabel,
                   locationNote: _locationController.locationNote,
                   temperatureUnit: _temperatureUnit,
@@ -170,66 +205,6 @@ class _HomeViewState extends State<_HomeView> {
                 );
               },
             ),
-            SizedBox(height: spacing.lg),
-            HomeSectionTitle(title: 'Reminders', textTheme: textTheme),
-            SizedBox(height: spacing.sm),
-            BlocBuilder<HomeReminderCubit, HomeReminderState>(
-              builder: (context, reminderState) {
-                final nextReminder = reminderState.items.isEmpty
-                    ? null
-                    : reminderState.items.first;
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (nextReminder != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Text(
-                          nextReminder.isOverdue
-                              ? 'Overdue: ${nextReminder.plantName}'
-                              : 'Next: ${DateFormat('EEE h:mm a').format(nextReminder.dueAt)}'
-                                  ' - ${nextReminder.plantName}',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: nextReminder.isOverdue
-                                ? colorScheme.error
-                                : null,
-                          ),
-                        ),
-                      ),
-                    HomeReminderStrip(
-                      spacing: spacing,
-                      textTheme: textTheme,
-                      colorScheme: colorScheme,
-                      items: reminderState.items,
-                      onMarkDone: (item) async {
-                        final reminderCubit =
-                            context.read<HomeReminderCubit>();
-                        await reminderCubit.markDone(item.plantId);
-                        // Keep the library's overdue badges in sync.
-                        await getIt<PlantListCubit>().loadPlants();
-                      },
-                      onEmptyAction: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const PlantFormPage(),
-                          ),
-                        );
-                      },
-                      emptyActionLabel: 'Add a plant',
-                      onTapItem: (item) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                PlantDetailPage(plantId: item.plantId),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                );
-              },
-            ),
-            SizedBox(height: spacing.xxl),
           ],
         );
       },
@@ -237,3 +212,13 @@ class _HomeViewState extends State<_HomeView> {
   }
 }
 
+/// "Good morning, Sam", or just "Good morning" when no name is set.
+String greetingFor(DateTime now, String? name) {
+  final part = now.hour < 12
+      ? 'Good morning'
+      : now.hour < 18
+          ? 'Good afternoon'
+          : 'Good evening';
+  final trimmed = name?.trim();
+  return trimmed == null || trimmed.isEmpty ? part : '$part, $trimmed';
+}

@@ -16,6 +16,7 @@ import 'package:water_it/core/settings/app_settings.dart';
 import 'package:water_it/core/theme/app_spacing.dart';
 import 'package:water_it/core/widgets/app_bars/sliver_page_header.dart';
 import 'package:water_it/features/home/presentation/utils/home_location_controller.dart';
+import 'package:water_it/features/feedback/presentation/pages/feedback_page.dart';
 import 'package:water_it/features/settings/presentation/widgets/settings_sections.dart';
 import 'package:water_it/features/plants/domain/services/reminder_scheduler.dart';
 
@@ -54,6 +55,7 @@ class _SettingsPageState extends State<SettingsPage>
   };
   bool _backupBusy = false;
   NotificationReadiness? _readiness;
+  String? _displayName;
   bool _wateringReminders = true;
   bool _dailySummary = false;
   TemperatureUnit _temperatureUnit = TemperatureUnit.celsius;
@@ -93,6 +95,47 @@ class _SettingsPageState extends State<SettingsPage>
       _isLoading = false;
     });
     await _loadReadiness();
+    final name = await AppSettings.getDisplayName();
+    if (mounted) {
+      setState(() => _displayName = name);
+    }
+  }
+
+  Future<void> _editDisplayName() async {
+    final controller = TextEditingController(text: _displayName ?? '');
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Your name'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+            hintText: 'Shown in the Home greeting',
+          ),
+          onSubmitted: (value) => Navigator.of(dialogContext).pop(value),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(controller.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (result == null) {
+      return; // Cancelled.
+    }
+    await AppSettings.setDisplayName(result);
+    if (mounted) {
+      setState(() => _displayName = AppSettings.displayNameNotifier.value);
+    }
   }
 
   Future<void> _loadAppVersion() async {
@@ -492,6 +535,19 @@ class _SettingsPageState extends State<SettingsPage>
                       sliver: SliverList(
                         delegate: SliverChildListDelegate(
                           [
+                            SettingsSectionCard(
+                              title: 'You',
+                              children: [
+                                SettingsTile(
+                                  title: 'Your name',
+                                  subtitle: _displayName == null
+                                      ? 'Optional - personalises the Home greeting. Stays on this phone.'
+                                      : _displayName!,
+                                  onTap: _isLoading ? null : _editDisplayName,
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: spacing.sm),
                             KeyedSubtree(
                               key: _sectionKeys[SettingsSection.notifications],
                               child: SettingsSectionCard(
@@ -634,6 +690,15 @@ class _SettingsPageState extends State<SettingsPage>
                               child: SettingsSectionCard(
                                 title: 'About',
                                 children: [
+                                  SettingsTile(
+                                    title: 'Send feedback',
+                                    subtitle: 'Report a problem or suggest an idea.',
+                                    onTap: () => Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => const FeedbackPage(),
+                                      ),
+                                    ),
+                                  ),
                                   SettingsTile(
                                     title: 'App version',
                                     subtitle: _appVersion.isEmpty

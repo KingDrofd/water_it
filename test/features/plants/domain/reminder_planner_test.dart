@@ -125,6 +125,27 @@ void main() {
     });
   });
 
+  test('a never-completed interval task counts from its creation', () {
+    final plans = ReminderPlanner.buildPlans(
+      plants: plants,
+      tasks: [
+        CareTask(
+          id: 'new',
+          plantId: 'p2',
+          type: CareTaskType.fertilize,
+          scheduleType: CareScheduleType.interval,
+          intervalDays: 30,
+          createdAt: DateTime(2026, 8, 4, 9, 30),
+        ),
+      ],
+      latestEvents: const {},
+      now: now,
+    );
+
+    // Created today; first reminder 30 days out, not tomorrow morning.
+    expect(plans.single.scheduledAt, DateTime(2026, 9, 3, 9));
+  });
+
   group('buildDailySummary', () {
     test('lists plants due on the summary day', () {
       // now is Tuesday 10:00 → summary fires Wednesday 08:00 (weekday 3).

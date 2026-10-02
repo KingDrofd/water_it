@@ -352,31 +352,6 @@ void main() {
       expect(events.first.source, CareEventSource.home);
     });
 
-    test('latest per plant groups by plant and filters type', () async {
-      await eventSource.insertEvent(
-        buildEvent(id: 'a1', plantId: 'pa', completedAt: DateTime(2026, 7, 18)),
-      );
-      await eventSource.insertEvent(
-        buildEvent(id: 'a2', plantId: 'pa', completedAt: DateTime(2026, 7, 21)),
-      );
-      await eventSource.insertEvent(
-        buildEvent(id: 'b1', plantId: 'pb', completedAt: DateTime(2026, 7, 19)),
-      );
-      await eventSource.insertEvent(
-        buildEvent(
-          id: 'b2',
-          plantId: 'pb',
-          type: 'fertilize',
-          completedAt: DateTime(2026, 7, 22),
-        ),
-      );
-
-      final latest = await eventSource.getLatestByPlant('water');
-
-      expect(latest['pa'], DateTime(2026, 7, 21));
-      expect(latest['pb'], DateTime(2026, 7, 19));
-    });
-
     test('latest per plant and type groups both dimensions', () async {
       await eventSource.insertEvent(
         buildEvent(id: 'w1', plantId: 'pa', completedAt: DateTime(2026, 7, 18)),

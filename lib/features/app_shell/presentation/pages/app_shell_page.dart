@@ -6,21 +6,12 @@ import 'package:water_it/core/layout/app_layout.dart';
 import 'package:water_it/core/notifications/notification_service.dart';
 import 'package:water_it/core/notifications/reminder_permission_flow.dart';
 import 'package:water_it/core/settings/app_settings.dart';
-import 'package:water_it/core/widgets/app_bars/app_bar_elements.dart';
-import 'package:water_it/core/widgets/app_bars/app_bar_icon_button.dart';
-import 'package:water_it/core/widgets/app_bars/custom_app_bar.dart';
-import 'package:water_it/core/theme/app_spacing.dart';
-import 'package:water_it/core/widgets/nav_bars/custom_nav_bar.dart';
-import 'package:water_it/core/widgets/nav_bars/nav_item.dart';
-import 'package:water_it/features/settings/presentation/pages/settings_page.dart';
-import 'package:water_it/features/app_shell/presentation/widgets/quick_actions_drawer.dart';
+import 'package:water_it/features/add_plant/presentation/add_plant_sheet.dart';
+import 'package:water_it/features/app_shell/presentation/widgets/app_bottom_nav.dart';
 import 'package:water_it/features/home/presentation/pages/home_page.dart';
 import 'package:water_it/features/plants/presentation/pages/plants_page.dart';
-import 'package:water_it/features/plants/presentation/pages/plant_form_page.dart';
 import 'package:water_it/features/plants/presentation/bloc/plant_list_cubit.dart';
-import 'package:water_it/features/add_plant/presentation/pages/add_plant_page.dart';
 import 'package:water_it/features/home/presentation/utils/home_location_controller.dart';
-import 'package:water_it/features/feedback/presentation/pages/feedback_page.dart';
 
 class AppShellPage extends StatefulWidget {
   const AppShellPage({super.key});
@@ -38,19 +29,11 @@ class _AppShellPageState extends State<AppShellPage>
   final List<Widget> _pages = const [
     HomePage(),
     PlantsPage(),
-    AddPlantPage(),
   ];
 
-  late final List<NavItem> _navItems = const [
-    NavItem(label: 'Home', icon: Icon(Icons.home_outlined)),
-    NavItem(label: 'Plants', icon: Icon(Icons.local_florist_outlined)),
-    NavItem(label: 'Add Plant', icon: Icon(Icons.camera_alt_outlined)),
-  ];
-
-  final List<String> _titles = const [
-    'Home',
-    'Plants',
-    'Add Plant',
+  static const List<AppNavDestination> _destinations = [
+    AppNavDestination(label: 'Home', icon: Icons.home_rounded),
+    AppNavDestination(label: 'Plants', icon: Icons.local_florist_rounded),
   ];
 
   @override
@@ -103,24 +86,24 @@ class _AppShellPageState extends State<AppShellPage>
     }
   }
 
+  Future<void> _addPlant() async {
+    await showAddPlantSheet(context);
+    if (mounted) {
+      await context.read<PlantListCubit>().loadPlants();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final spacing = Theme.of(context).extension<AppSpacing>() ?? const AppSpacing();
-
     return Scaffold(
-      drawer: QuickActionsDrawer(
-        onActionSelected: _handleQuickAction,
-      ),
       body: LayoutBuilder(
         builder: (context, constraints) {
           final width = constraints.maxWidth;
           final padding = AppLayout.pagePadding(width);
           final contentMax = AppLayout.maxContentWidth(width);
-          final scale = AppLayout.scaleForWidth(width);
-          final gutter = AppLayout.gutter(width);
-          final mediaPadding = MediaQuery.of(context).padding.top;
-          final appBarHeight = mediaPadding + (spacing.sm * scale) + (72 * scale);
-          final navBarHeight = (72 * scale) + (gutter * 2);
+          final media = MediaQuery.of(context).padding;
+          const navHeight = 68.0;
+          final navInset = navHeight + 16 + media.bottom;
 
           return Center(
             child: ConstrainedBox(
@@ -134,8 +117,8 @@ class _AppShellPageState extends State<AppShellPage>
                       padding: EdgeInsets.only(
                         left: padding.left,
                         right: padding.right,
-                        top: _showBars ? appBarHeight : spacing.lg,
-                        bottom: _showBars ? navBarHeight : spacing.xxl,
+                        top: media.top,
+                        bottom: _showBars ? navInset : media.bottom,
                       ),
                       child: NotificationListener<ScrollNotification>(
                         onNotification: (notification) {
@@ -159,57 +142,14 @@ class _AppShellPageState extends State<AppShellPage>
                   AnimatedPositioned(
                     duration: const Duration(milliseconds: 200),
                     curve: Curves.easeOut,
-                    top: _showBars ? 0 : -appBarHeight,
-                    left: 0,
-                    right: 0,
-                    child: Builder(
-                      builder: (appBarContext) {
-                        return CustomAppBar(
-                          elements: AppBarElements(
-                            leading: AppBarIconButton(
-                              icon: Icons.menu,
-                              onTap: () =>
-                                  Scaffold.of(appBarContext).openDrawer(),
-                            ),
-                            title: Center(
-                              child: Text(
-                                _titles[_selectedIndex],
-                                style:
-                                    Theme.of(context).textTheme.displaySmall,
-                              ),
-                            ),
-                            action: _selectedIndex == 1
-                                ? AppBarIconButton(
-                                    icon: Icons.add,
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              const PlantFormPage(),
-                                        ),
-                                      ).then((_) {
-                                        context
-                                            .read<PlantListCubit>()
-                                            .loadPlants();
-                                      });
-                                    },
-                                  )
-                                : null,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  AnimatedPositioned(
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeOut,
-                    left: 0,
-                    right: 0,
-                    bottom: _showBars ? 0 : -navBarHeight,
-                    child: CustomNavBar(
-                      items: _navItems,
+                    left: 16,
+                    right: 16,
+                    bottom: _showBars ? 12 + media.bottom : -navInset,
+                    child: AppBottomNav(
+                      destinations: _destinations,
                       selectedIndex: _selectedIndex,
-                      onTap: _setIndex,
+                      onSelect: _setIndex,
+                      onAddPlant: _addPlant,
                     ),
                   ),
                 ],
@@ -219,66 +159,6 @@ class _AppShellPageState extends State<AppShellPage>
         },
       ),
     );
-  }
-
-  void _handleQuickAction(QuickAction action) {
-    Navigator.of(context).maybePop();
-    if (!mounted) {
-      return;
-    }
-
-    switch (action) {
-      case QuickAction.about:
-        _openAbout();
-        return;
-      case QuickAction.settings:
-        _openSettings();
-        return;
-      case QuickAction.feedback:
-        _openFeedback();
-        return;
-    }
-  }
-
-  void _openAbout() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
-      }
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => const SettingsPage(
-            initialSection: SettingsSection.about,
-          ),
-        ),
-      );
-    });
-  }
-
-  void _openSettings() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
-      }
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => const SettingsPage(),
-        ),
-      );
-    });
-  }
-
-  void _openFeedback() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
-      }
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => const FeedbackPage(),
-        ),
-      );
-    });
   }
 
   Future<void> _requestNotificationPermission() async {

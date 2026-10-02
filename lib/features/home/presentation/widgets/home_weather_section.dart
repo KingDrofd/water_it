@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:water_it/core/theme/app_colors.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:water_it/core/settings/app_settings.dart';
@@ -38,7 +39,6 @@ class HomeWeatherSection extends StatelessWidget {
   final double gutter;
   final bool isPlaceholder;
   final String? errorMessage;
-  final String title;
   final String locationLabel;
   final String locationNote;
   final TemperatureUnit temperatureUnit;
@@ -52,7 +52,6 @@ class HomeWeatherSection extends StatelessWidget {
     required this.colorScheme,
     required this.textTheme,
     required this.gutter,
-    required this.title,
     required this.locationLabel,
     required this.locationNote,
     required this.temperatureUnit,
@@ -64,52 +63,49 @@ class HomeWeatherSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     return Container(
-      padding: EdgeInsets.all(spacing.lg),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFFD6CBC7),
-        borderRadius: BorderRadius.circular(24),
+        color: palette.card,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: palette.shadow,
+            blurRadius: 22,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: textTheme.displaySmall?.copyWith(fontSize: 28),
+          InkWell(
+            onTap: onLocationTap,
+            borderRadius: BorderRadius.circular(8),
+            child: Row(
+              children: [
+                Icon(Icons.place_rounded, size: 18, color: palette.ink),
+                SizedBox(width: spacing.xs),
+                Expanded(
+                  child: Text(
+                    locationLabel,
+                    style: textTheme.titleSmall,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-              GestureDetector(
-                onTap: onLocationTap,
-                behavior: HitTestBehavior.opaque,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.place_outlined,
-                          size: 16,
-                          color: colorScheme.onSurface,
-                        ),
-                        SizedBox(width: spacing.xs),
-                        Text(locationLabel, style: textTheme.labelLarge),
-                      ],
-                    ),
-                    SizedBox(height: spacing.xs),
-                    Text(locationNote, style: textTheme.bodySmall),
-                  ],
+                Text(
+                  locationNote,
+                  style: textTheme.bodySmall?.copyWith(color: palette.muted),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           SizedBox(height: spacing.md),
-          SizedBox(
-            height: 150,
+          // A minimum rather than a fixed height: the row must be free to
+          // grow with the user's text scale instead of overflowing.
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 112),
             child: errorMessage != null
                 ? Center(
                     child: Column(
@@ -186,7 +182,9 @@ class _WeatherTile extends StatelessWidget {
       children: [
         Text(
           '$dayLabel $timeLabel',
-          style: textTheme.titleMedium?.copyWith(fontSize: 16),
+          style: textTheme.labelSmall?.copyWith(
+            color: AppPalette.of(context).muted,
+          ),
         ),
         const SizedBox(height: 6),
         _WeatherIconPlaceholder(
@@ -196,7 +194,10 @@ class _WeatherTile extends StatelessWidget {
           isPlaceholder: isPlaceholder,
         ),
         const SizedBox(height: 6),
-        Text('$tempLabel${temperatureUnit.symbol}', style: textTheme.titleLarge),
+        Text(
+          '$tempLabel${temperatureUnit.symbol}',
+          style: textTheme.titleSmall,
+        ),
       ],
     );
   }
@@ -334,24 +335,5 @@ String _weatherIconForCondition(String conditionKey, int cloudiness) {
       return 'assets/images/weather/rain.svg';
     default:
       return 'assets/images/weather/cloudy_sun.svg';
-  }
-}
-
-class HomeSectionTitle extends StatelessWidget {
-  final String title;
-  final TextTheme textTheme;
-
-  const HomeSectionTitle({
-    super.key,
-    required this.title,
-    required this.textTheme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: textTheme.headlineSmall,
-    );
   }
 }
