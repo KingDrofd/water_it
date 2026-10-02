@@ -117,6 +117,8 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/weather/
+    # Screenshot-only stock photos; see lib/core/demo/demo_seed.dart.
+    - assets/demo/
     # SIL Open Font License texts, registered with the Licenses page.
     - assets/fonts/Pacifico/OFL.txt
     - assets/fonts/Quicksand/OFL.txt

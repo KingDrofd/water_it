@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:water_it/core/app_info/app_info.dart';
+import 'package:water_it/core/demo/demo_seed.dart';
 import 'package:water_it/core/di/service_locator.dart';
 import 'package:water_it/core/notifications/notification_payload.dart';
 import 'package:water_it/core/notifications/notification_service.dart';
@@ -18,6 +19,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   _registerFontLicenses();
   await setupLocator();
+  await seedDemoData();
   _wireNotificationCallbacks();
   runApp(const WaterItApp());
   await _openPlantFromLaunchNotification();
